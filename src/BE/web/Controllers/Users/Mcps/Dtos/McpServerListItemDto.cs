@@ -10,9 +10,9 @@ public record McpServerListItemDto
     [JsonPropertyName("showShortcut")] public bool ShowShortcut { get; init; }
 }
 
+[JsonDerivedType(typeof(EditableManagementMcpServerDto))]
 public record ManagementMcpServerDto : McpServerListItemDto
 {
-    [JsonPropertyName("url")] public required string Url { get; init; }
     [JsonPropertyName("createdAt")] public required DateTime CreatedAt { get; init; }
     [JsonPropertyName("updatedAt")] public required DateTime UpdatedAt { get; init; }
     [JsonPropertyName("toolsCount")] public required int ToolsCount { get; init; }
@@ -21,4 +21,9 @@ public record ManagementMcpServerDto : McpServerListItemDto
     [JsonPropertyName("assignedUserCount")] public required int AssignedUserCount { get; init; }
     /// <summary>Whether the current user is assigned this MCP (can toggle own shortcut).</summary>
     [JsonPropertyName("assignedToMe")] public bool AssignedToMe { get; init; }
+}
+
+public record EditableManagementMcpServerDto : ManagementMcpServerDto
+{
+    [JsonPropertyName("url")] public required string Url { get; init; }
 }

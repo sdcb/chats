@@ -147,7 +147,7 @@ const McpTab = () => {
       (server) =>
         server.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         (server.displayName?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false) ||
-        server.url.toLowerCase().includes(searchTerm.toLowerCase()),
+        (server.url?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false),
     );
     setFilteredServers(filtered);
   }, [mcpServers, searchTerm]);
@@ -407,7 +407,11 @@ const McpTab = () => {
                         className="max-w-xs truncate"
                         title={server.url}
                       >
-                        {server.url}
+                        {server.url || (
+                          <span className="text-xs text-muted-foreground">
+                            —
+                          </span>
+                        )}
                       </TableCell>
                       <TableCell>
                         <Badge variant="outline">{server.toolsCount}</Badge>
