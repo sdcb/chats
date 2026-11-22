@@ -45,6 +45,40 @@ export type UserContainerResource = {
   volumeDeclaredBytes: number | null;
   volumeMountCount: number;
   chatAccessCount: number;
+  portMappingCount: number;
+};
+
+export type ContainerPortMapping = {
+  id: number;
+  containerPort: number;
+  hostPort: number;
+  protocol: 'tcp' | 'udp';
+  runtimeNodeId: number;
+  publicHost: string;
+  upstreamAddress: string;
+  createdAt: string;
+};
+
+export type ContainerVolumeMount = {
+  id: number;
+  containerResourceId: number;
+  encryptedContainerResourceId: string;
+  containerName: string | null;
+  containerPath: string;
+  isReadOnly: boolean;
+  mountedAt: string;
+};
+
+export type ContainerVolume = {
+  id: number;
+  name: string;
+  runtimeNodeId: number;
+  runtimeNodeName: string | null;
+  backendVolumeId: string | null;
+  declaredBytes: number | null;
+  createdAt: string;
+  updatedAt: string;
+  containerVolumeMounts: ContainerVolumeMount[];
 };
 
 export type CreateContainerResourceRequest = {

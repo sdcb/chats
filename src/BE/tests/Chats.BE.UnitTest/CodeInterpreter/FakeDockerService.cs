@@ -124,6 +124,31 @@ public sealed class FakeDockerService : IDockerService
         await Task.CompletedTask;
     }
 
+    public List<ContainerCreateOptions?> CreateOptions { get; } = [];
+    public List<string> CreatedVolumes { get; } = [];
+    public List<string> DeletedVolumes { get; } = [];
+    public List<string> DeletedContainers { get; } = [];
+    public List<string> StoppedContainers { get; } = [];
+    public List<string> StartedContainers { get; } = [];
+
+    public Task<ContainerInfo> CreateContainerCoreAsync(string image, ResourceLimits? resourceLimits, string? networkName, ContainerCreateOptions? options, CancellationToken cancellationToken = default)
+    {
+        CreateOptions.Add(options);
+        return CreateContainerCoreAsync(image, resourceLimits, networkName, cancellationToken);
+    }
+
+    public Task CreateVolumeAsync(string name, IReadOnlyDictionary<string, string>? labels = null, CancellationToken cancellationToken = default)
+    {
+        CreatedVolumes.Add(name);
+        return Task.CompletedTask;
+    }
+
+    public Task DeleteVolumeAsync(string name, CancellationToken cancellationToken = default)
+    {
+        DeletedVolumes.Add(name);
+        return Task.CompletedTask;
+    }
+
     public Task<ContainerInfo> CreateContainerCoreAsync(string image, ResourceLimits? resourceLimits = null, string? networkName = null, CancellationToken cancellationToken = default)
     {
         CreateContainerCalled = true;
@@ -160,13 +185,22 @@ public sealed class FakeDockerService : IDockerService
         => Task.FromResult<ContainerInfo?>(null);
 
     public Task DeleteContainerAsync(string containerId, CancellationToken cancellationToken = default)
-        => Task.CompletedTask;
+    {
+        DeletedContainers.Add(containerId);
+        return Task.CompletedTask;
+    }
 
     public Task StartContainerAsync(string containerId, CancellationToken cancellationToken = default)
-        => Task.CompletedTask;
+    {
+        StartedContainers.Add(containerId);
+        return Task.CompletedTask;
+    }
 
     public Task StopContainerAsync(string containerId, CancellationToken cancellationToken = default)
-        => Task.CompletedTask;
+    {
+        StoppedContainers.Add(containerId);
+        return Task.CompletedTask;
+    }
 
     public Task UpdateContainerResourcesAsync(string containerId, ResourceLimits resourceLimits, CancellationToken cancellationToken = default)
         => Task.CompletedTask;

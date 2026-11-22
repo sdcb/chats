@@ -15,8 +15,10 @@ import {
   TextFileResponse,
 } from '@/types/containers';
 import {
+  ContainerPortMapping,
   ContainerResource,
   ContainerTemplate,
+  ContainerVolume,
   CreateContainerResourceRequest,
   UserContainerResource,
 } from '@/types/containers';
@@ -333,13 +335,14 @@ export const revokeContainerFromChat = (id: string, chatId: string) =>
       chatId,
     )}/grant`,
   );
-export const listVolumes = () => createFetchClient().get<any[]>('/api/volumes');
+export const listVolumes = () =>
+  createFetchClient().get<ContainerVolume[]>('/api/volumes');
 export const createVolume = (body: {
   runtimeNodeId: number;
   name: string;
   backendVolumeId?: string | null;
   declaredBytes?: number | null;
-}) => createFetchClient().post<any>('/api/volumes', { body });
+}) => createFetchClient().post<ContainerVolume>('/api/volumes', { body });
 export const mountVolume = (
   id: number,
   body: {
@@ -352,3 +355,19 @@ export const unmountVolume = (id: number, mountId: number) =>
   createFetchClient().delete<void>(`/api/volumes/${id}/mounts/${mountId}`);
 export const deleteVolume = (id: number) =>
   createFetchClient().delete<void>(`/api/volumes/${id}`);
+export const listContainerPortMappings = (id: string) =>
+  createFetchClient().get<ContainerPortMapping[]>(
+    `/api/containers/${encodeURIComponent(id)}/port-mappings`,
+  );
+export const addContainerPortMapping = (
+  id: string,
+  body: { containerPort: number; protocol: 'tcp' | 'udp' },
+) =>
+  createFetchClient().post<ContainerPortMapping>(
+    `/api/containers/${encodeURIComponent(id)}/port-mappings`,
+    { body },
+  );
+export const removeContainerPortMapping = (id: string, mappingId: number) =>
+  createFetchClient().delete<void>(
+    `/api/containers/${encodeURIComponent(id)}/port-mappings/${mappingId}`,
+  );

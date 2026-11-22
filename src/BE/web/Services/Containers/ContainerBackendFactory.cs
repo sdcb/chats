@@ -4,14 +4,14 @@ using Microsoft.Extensions.Options;
 
 namespace Chats.BE.Services.Containers;
 
-public sealed class ContainerBackendFactory(IOptions<CodePodConfig> defaults, ILoggerFactory loggerFactory) : IDisposable
+public class ContainerBackendFactory(IOptions<CodePodConfig> defaults, ILoggerFactory loggerFactory) : IDisposable
 {
     private readonly CodePodConfig _defaults = defaults.Value;
     private readonly ILoggerFactory _loggerFactory = loggerFactory;
     private readonly Dictionary<int, CachedClient> _clients = [];
     private readonly Lock _gate = new();
 
-    public IDockerService Get(ContainerRuntimeNode node)
+    public virtual IDockerService Get(ContainerRuntimeNode node)
     {
         lock (_gate)
         {

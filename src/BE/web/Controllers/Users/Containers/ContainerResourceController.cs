@@ -309,8 +309,9 @@ public sealed class ContainerResourceController(
             x.DeletedAt,
             x.CleanupAt,
             x.ContainerVolume == null ? null : x.ContainerVolume.DeclaredBytes,
-            x.ContainerVolumeMounts.Count(),
-            x.ChatContainerResourceAccesses.Count());
+            x.ContainerVolumeMounts.Count(m => m.IsActive),
+            x.ChatContainerResourceAccesses.Count(),
+            x.ContainerPortMappings.Count(m => m.IsActive));
 
     private UserContainerResourceDto ToDto(UserContainerResourceRow row) => new(
         row.Id,
@@ -339,7 +340,8 @@ public sealed class ContainerResourceController(
         row.CleanupAt,
         row.VolumeDeclaredBytes,
         row.VolumeMountCount,
-        row.ChatAccessCount);
+        row.ChatAccessCount,
+        row.PortMappingCount);
 
     private static List<string>? ParseColumns(string? columns)
     {
@@ -362,7 +364,7 @@ public sealed class ContainerResourceController(
             "id", "runtimeNodeId", "runtimeNodeName", "runtimeNodeAIName", "name", "image", "status",
             "isPermanent", "backendResourceId", "ip", "cpuCores", "memoryBytes", "maxProcesses",
             "backendNetworkName", "createdAt", "updatedAt", "lastActiveAt", "stoppedAt", "deletedAt",
-            "cleanupAt", "volumeDeclaredBytes", "volumeMountCount", "chatAccessCount"
+            "cleanupAt", "volumeDeclaredBytes", "volumeMountCount", "chatAccessCount", "portMappingCount"
         ];
         Dictionary<string, object?> exportRow = new();
         foreach (string column in columns)
@@ -396,6 +398,7 @@ public sealed class ContainerResourceController(
                 case "volumeDeclaredBytes": exportRow["Volume bytes"] = row.VolumeDeclaredBytes; break;
                 case "volumeMountCount": exportRow["Volume mounts"] = row.VolumeMountCount; break;
                 case "chatAccessCount": exportRow["Chat access count"] = row.ChatAccessCount; break;
+                case "portMappingCount": exportRow["Port mappings"] = row.PortMappingCount; break;
             }
         }
         return exportRow;
@@ -430,7 +433,8 @@ public sealed class ContainerResourceController(
         DateTime? CleanupAt,
         long? VolumeDeclaredBytes,
         int VolumeMountCount,
-        int ChatAccessCount);
+        int ChatAccessCount,
+        int PortMappingCount);
 
     private ContainerResourceDto ToDto(ContainerResource resource) => new(
         _encryption.Encrypt(resource.Id, EncryptionPurpose.DockerSessionId),

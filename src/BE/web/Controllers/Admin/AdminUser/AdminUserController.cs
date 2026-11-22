@@ -3,6 +3,7 @@ using Chats.BE.Controllers.Admin.Common;
 using Chats.BE.Controllers.Common.Dtos;
 using Chats.BE.Infrastructure;
 using Chats.BE.Services.Common;
+using Chats.BE.Services.Containers;
 using Chats.BE.Services;
 using Chats.BE.Services.OpenAIApiKeySession;
 using Chats.DB;
@@ -53,6 +54,8 @@ public class AdminUserController(ChatsDB db, CurrentUser adminUser) : Controller
     public async Task<IActionResult> UpdateUser([FromBody] UpdateUserDto dto,
         [FromServices] PasswordHasher passwordHasher,
         [FromServices] OpenAIApiKeySessionManager apiKeySessions,
+        [FromServices] ContainerRuntimeManager containerRuntime,
+        [FromServices] ILogger<AdminUserController> logger,
         CancellationToken cancellationToken)
     {
         User? user = await db.Users.FindAsync([dto.UserId], cancellationToken);
@@ -88,6 +91,7 @@ public class AdminUserController(ChatsDB db, CurrentUser adminUser) : Controller
             user.Sub = normalizedSub;
         }
 
+        bool disabling = dto.Enabled == false && user.Enabled;
         bool invalidateApiKeys = dto.Enabled.HasValue && dto.Enabled.Value != user.Enabled ||
             dto.ApiKeyEnabled.HasValue && dto.ApiKeyEnabled.Value != user.ApiKeyEnabled;
 
@@ -101,6 +105,12 @@ public class AdminUserController(ChatsDB db, CurrentUser adminUser) : Controller
         if (invalidateApiKeys)
         {
             apiKeySessions.InvalidateUser(user.Id);
+        }
+        if (disabling)
+        {
+            // Disabled users keep their permanent containers/volumes, but nothing keeps running.
+            try { await containerRuntime.StopUserContainersAsync(user.Id, CancellationToken.None); }
+            catch (Exception ex) { logger.LogWarning(ex, "Failed to stop containers of disabled user {UserId}", user.Id); }
         }
         return NoContent();
     }

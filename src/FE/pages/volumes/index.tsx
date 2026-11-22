@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 
 import useTranslation from '@/hooks/useTranslation';
 
-import { ContainerResource } from '@/types/containers';
+import { ContainerResource, ContainerVolume } from '@/types/containers';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -17,21 +17,10 @@ import {
   unmountVolume,
 } from '@/apis/containersApi';
 
-type Volume = {
-  id: number;
-  name: string;
-  declaredBytes: number | null;
-  containerVolumeMounts: Array<{
-    id: number;
-    containerResourceId: number;
-    containerPath: string;
-    isReadOnly: boolean;
-  }>;
-};
 
 export default function VolumesPage() {
   const { t } = useTranslation();
-  const [volumes, setVolumes] = useState<Volume[]>([]);
+  const [volumes, setVolumes] = useState<ContainerVolume[]>([]);
   const [containers, setContainers] = useState<ContainerResource[]>([]);
   const [name, setName] = useState('');
   const [declaredBytes, setDeclaredBytes] = useState('');
@@ -59,6 +48,11 @@ export default function VolumesPage() {
       <h1 className="text-2xl font-semibold">{t('Volumes')}</h1>
       <section className="rounded-lg border p-4 space-y-3">
         <h2 className="font-medium">{t('Create standalone volume')}</h2>
+        <p className="text-sm text-muted-foreground">
+          {t(
+            'Mounting or unmounting a volume recreates the container. Files outside mounted volumes will be lost.',
+          )}
+        </p>
         <div className="grid gap-2 sm:grid-cols-3">
           <Label>
             {t('Name')}
@@ -106,6 +100,7 @@ export default function VolumesPage() {
                   className="flex justify-between text-sm border-t pt-2"
                 >
                   <span>
+                    {mount.containerName ?? mount.encryptedContainerResourceId}:{' '}
                     {mount.containerPath} ·{' '}
                     {mount.isReadOnly ? t('Read only') : t('Read/write')}
                   </span>
@@ -127,7 +122,9 @@ export default function VolumesPage() {
                 id={`container-${volume.id}`}
               >
                 {containers
-                  .filter((container) => !container.isDeleted)
+                  .filter(
+                    (container) => container.isPermanent && !container.isDeleted,
+                  )
                   .map((container) => (
                     <option
                       key={container.encryptedId}
@@ -142,6 +139,10 @@ export default function VolumesPage() {
                 placeholder="/data"
                 className="h-9"
               />
+              <label className="flex items-center gap-1 whitespace-nowrap text-sm">
+                <input type="checkbox" id={`readonly-${volume.id}`} />
+                {t('Read only')}
+              </label>
               <Button
                 size="sm"
                 onClick={() => {
@@ -151,11 +152,17 @@ export default function VolumesPage() {
                   const p = document.getElementById(
                     `path-${volume.id}`,
                   ) as HTMLInputElement;
+                  const ro = document.getElementById(
+                    `readonly-${volume.id}`,
+                  ) as HTMLInputElement;
+                  if (!c.value) return;
                   return mountVolume(volume.id, {
                     encryptedContainerResourceId: c.value,
                     containerPath: p.value || '/data',
-                    isReadOnly: false,
-                  }).then(refresh);
+                    isReadOnly: ro.checked,
+                  })
+                    .then(refresh)
+                    .catch(() => null);
                 }}
               >
                 {t('Mount')}

@@ -390,6 +390,10 @@ export default function AdminContainersPage() {
       endpoint: node.endpoint || '',
       credential: '',
       isEnabled: node.isEnabled,
+      publicHost: node.publicHost || '',
+      portRangeStart:
+        node.portRangeStart == null ? '' : String(node.portRangeStart),
+      portRangeEnd: node.portRangeEnd == null ? '' : String(node.portRangeEnd),
     });
     setRuntimeDialog(node.id);
   };
@@ -443,6 +447,8 @@ export default function AdminContainersPage() {
       maxContainerCpuCores: asText(quota.maxContainerCpuCores),
       maxContainerMemoryBytes: asText(quota.maxContainerMemoryBytes),
       maxVolumeBytesPerVolume: asText(quota.maxVolumeBytesPerVolume),
+      maxPortMappings: asText(quota.maxPortMappings),
+      maxPublishedSites: asText(quota.maxPublishedSites),
     });
     setQuotaDialog(quota.id);
   };
@@ -454,9 +460,32 @@ export default function AdminContainersPage() {
 
   const saveRuntime = async () => {
     if (!runtimeForm.name.trim() || !runtimeForm.aiName.trim()) return;
+    const portOrNull = (value: string) =>
+      value.trim() ? Number(value.trim()) : null;
+    const portRangeStart = portOrNull(runtimeForm.portRangeStart);
+    const portRangeEnd = portOrNull(runtimeForm.portRangeEnd);
+    const validPort = (value: number | null) =>
+      value != null && Number.isInteger(value) && value >= 1 && value <= 65535;
+    if (
+      (portRangeStart == null) !== (portRangeEnd == null) ||
+      (portRangeStart != null &&
+        (!validPort(portRangeStart) ||
+          !validPort(portRangeEnd) ||
+          portRangeStart > (portRangeEnd as number)))
+    ) {
+      toast.error(
+        t(
+          'Port range must be empty or a valid range between 1 and 65535 (start <= end)',
+        ),
+      );
+      return;
+    }
     setSaving(true);
     try {
       const body = {
+        publicHost: runtimeForm.publicHost.trim() || null,
+        portRangeStart,
+        portRangeEnd,
         name: runtimeForm.name.trim(),
         aiName: runtimeForm.aiName.trim(),
         description: runtimeForm.description.trim() || null,
@@ -578,6 +607,8 @@ export default function AdminContainersPage() {
           maxVolumeBytesPerVolume: numberOrNull(
             quotaForm.maxVolumeBytesPerVolume,
           ),
+          maxPortMappings: numberOrNull(quotaForm.maxPortMappings),
+          maxPublishedSites: numberOrNull(quotaForm.maxPublishedSites),
         },
       });
       toast.success(t('Save successful'));

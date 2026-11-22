@@ -68,7 +68,7 @@ public sealed class ContainerCatalogController(ChatsDB db) : ControllerBase
     {
         return await BuildRuntimeNodeQuery(query)
             .OrderBy(x => x.Name)
-            .Select(x => new RuntimeNodeDto(x.Id, x.Name, x.AiName, x.Description, x.BackendType, x.Endpoint, x.Credential != null, x.IsEnabled, x.CreatedAt, x.UpdatedAt))
+            .Select(x => new RuntimeNodeDto(x.Id, x.Name, x.AiName, x.Description, x.BackendType, x.Endpoint, x.Credential != null, x.IsEnabled, x.CreatedAt, x.UpdatedAt, x.PublicHost, x.PortRangeStart, x.PortRangeEnd))
             .ToListAsync(cancellationToken);
     }
 
@@ -79,7 +79,7 @@ public sealed class ContainerCatalogController(ChatsDB db) : ControllerBase
     {
         RuntimeNodeDto[] rows = await BuildRuntimeNodeQuery(query)
             .OrderBy(x => x.Name)
-            .Select(x => new RuntimeNodeDto(x.Id, x.Name, x.AiName, x.Description, x.BackendType, x.Endpoint, x.Credential != null, x.IsEnabled, x.CreatedAt, x.UpdatedAt))
+            .Select(x => new RuntimeNodeDto(x.Id, x.Name, x.AiName, x.Description, x.BackendType, x.Endpoint, x.Credential != null, x.IsEnabled, x.CreatedAt, x.UpdatedAt, x.PublicHost, x.PortRangeStart, x.PortRangeEnd))
             .ToArrayAsync(cancellationToken);
         List<string>? selectedColumns = ParseColumns(query.Columns);
         List<Dictionary<string, object?>> exportRows = rows
@@ -94,6 +94,7 @@ public sealed class ContainerCatalogController(ChatsDB db) : ControllerBase
     [HttpPost("runtime-nodes")]
     public async Task<IActionResult> CreateRuntimeNode([FromBody] RuntimeNodeRequest request, CancellationToken cancellationToken)
     {
+        if (ValidatePortRange(request) is { } portError) return BadRequest(portError);
         ContainerRuntimeNode node = new()
         {
             Name = request.Name.Trim(),
@@ -103,6 +104,9 @@ public sealed class ContainerCatalogController(ChatsDB db) : ControllerBase
             Endpoint = string.IsNullOrWhiteSpace(request.Endpoint) ? null : request.Endpoint.Trim(),
             Credential = string.IsNullOrWhiteSpace(request.Credential) ? null : request.Credential.Trim(),
             IsEnabled = request.IsEnabled,
+            PublicHost = string.IsNullOrWhiteSpace(request.PublicHost) ? null : request.PublicHost.Trim(),
+            PortRangeStart = request.PortRangeStart,
+            PortRangeEnd = request.PortRangeEnd,
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow,
         };
@@ -114,9 +118,13 @@ public sealed class ContainerCatalogController(ChatsDB db) : ControllerBase
     [HttpPut("runtime-nodes/{id:int}")]
     public async Task<IActionResult> UpdateRuntimeNode(int id, [FromBody] RuntimeNodeRequest request, CancellationToken cancellationToken)
     {
+        if (ValidatePortRange(request) is { } portError) return BadRequest(portError);
         ContainerRuntimeNode? node = await _db.ContainerRuntimeNodes.SingleOrDefaultAsync(x => x.Id == id, cancellationToken);
         if (node is null) return NotFound();
         node.Name = request.Name.Trim();
+        node.PublicHost = string.IsNullOrWhiteSpace(request.PublicHost) ? null : request.PublicHost.Trim();
+        node.PortRangeStart = request.PortRangeStart;
+        node.PortRangeEnd = request.PortRangeEnd;
         node.AiName = request.AIName.Trim();
         node.Description = request.Description?.Trim();
         node.BackendType = request.BackendType;
@@ -338,7 +346,7 @@ public sealed class ContainerCatalogController(ChatsDB db) : ControllerBase
                 x.AllowCustomImage, x.AllowedNetworkModes, x.MaxContainerCount,
                 x.MaxCpuCores, x.MaxMemoryBytes, x.MaxContainerProcesses,
                 x.MaxVolumeBytes, x.MaxContainerCpuCores, x.MaxContainerMemoryBytes,
-                x.MaxVolumeBytesPerVolume, x.UpdatedAt))
+                x.MaxVolumeBytesPerVolume, x.UpdatedAt, x.MaxPortMappings, x.MaxPublishedSites))
             .ToListAsync(cancellationToken);
 
     [HttpGet("quotas/export")]
@@ -353,7 +361,7 @@ public sealed class ContainerCatalogController(ChatsDB db) : ControllerBase
                 x.AllowCustomImage, x.AllowedNetworkModes, x.MaxContainerCount,
                 x.MaxCpuCores, x.MaxMemoryBytes, x.MaxContainerProcesses,
                 x.MaxVolumeBytes, x.MaxContainerCpuCores, x.MaxContainerMemoryBytes,
-                x.MaxVolumeBytesPerVolume, x.UpdatedAt))
+                x.MaxVolumeBytesPerVolume, x.UpdatedAt, x.MaxPortMappings, x.MaxPublishedSites))
             .ToArrayAsync(cancellationToken);
         List<string>? selectedColumns = ParseColumns(query.Columns);
         List<Dictionary<string, object?>> exportRows = rows
@@ -405,6 +413,8 @@ public sealed class ContainerCatalogController(ChatsDB db) : ControllerBase
     {
         if (userId.HasValue && !await _db.Users.AnyAsync(x => x.Id == userId.Value, cancellationToken))
             return BadRequest(new { Code = "UserNotFound", Message = "The selected user was not found." });
+        if (request.MaxPortMappings is < 0 || request.MaxPublishedSites is < 0)
+            return BadRequest(new { Code = "InvalidQuota", Message = "Quota limits cannot be negative." });
 
         UserContainerQuotum? quota = await _db.UserContainerQuota.SingleOrDefaultAsync(x => x.UserId == userId, cancellationToken);
         if (quota is null)
@@ -422,6 +432,8 @@ public sealed class ContainerCatalogController(ChatsDB db) : ControllerBase
         quota.MaxContainerCpuCores = request.MaxContainerCpuCores;
         quota.MaxContainerMemoryBytes = request.MaxContainerMemoryBytes;
         quota.MaxVolumeBytesPerVolume = request.MaxVolumeBytesPerVolume;
+        quota.MaxPortMappings = request.MaxPortMappings;
+        quota.MaxPublishedSites = request.MaxPublishedSites;
         quota.UpdatedAt = DateTime.UtcNow;
         await _db.SaveChangesAsync(cancellationToken);
         return Ok(new ContainerQuotaDto(
@@ -429,7 +441,7 @@ public sealed class ContainerCatalogController(ChatsDB db) : ControllerBase
             quota.AllowedNetworkModes, quota.MaxContainerCount, quota.MaxCpuCores,
             quota.MaxMemoryBytes, quota.MaxContainerProcesses, quota.MaxVolumeBytes,
             quota.MaxContainerCpuCores, quota.MaxContainerMemoryBytes,
-            quota.MaxVolumeBytesPerVolume, quota.UpdatedAt));
+            quota.MaxVolumeBytesPerVolume, quota.UpdatedAt, quota.MaxPortMappings, quota.MaxPublishedSites));
     }
 
     [HttpDelete("quotas/{userId:int}")]
@@ -494,7 +506,7 @@ public sealed class ContainerCatalogController(ChatsDB db) : ControllerBase
                 x.RuntimeNode.Id, x.RuntimeNode.Name, x.RuntimeNode.AiName,
                 x.RuntimeNode.Description, x.RuntimeNode.BackendType,
                 x.RuntimeNode.Endpoint, x.RuntimeNode.Credential != null, x.RuntimeNode.IsEnabled,
-                x.RuntimeNode.CreatedAt, x.RuntimeNode.UpdatedAt)));
+                x.RuntimeNode.CreatedAt, x.RuntimeNode.UpdatedAt, x.RuntimeNode.PublicHost, x.RuntimeNode.PortRangeStart, x.RuntimeNode.PortRangeEnd)));
 
     private IQueryable<ContainerRuntimeNode> BuildRuntimeNodeQuery(RuntimeNodeQuery query)
         => BuildRuntimeNodeQuery(query.Query, query.BackendType, query.Enabled);
@@ -613,7 +625,7 @@ public sealed class ContainerCatalogController(ChatsDB db) : ControllerBase
         RuntimeNodeDto row,
         IReadOnlyCollection<string>? selectedColumns)
     {
-        IEnumerable<string> columns = selectedColumns ?? ["id", "name", "aiName", "backendType", "isEnabled", "endpoint", "hasCredential", "description", "createdAt", "updatedAt"];
+        IEnumerable<string> columns = selectedColumns ?? ["id", "name", "aiName", "backendType", "isEnabled", "endpoint", "publicHost", "portRange", "hasCredential", "description", "createdAt", "updatedAt"];
         Dictionary<string, object?> result = new();
         foreach (string column in columns)
         {
@@ -625,6 +637,8 @@ public sealed class ContainerCatalogController(ChatsDB db) : ControllerBase
                 case "backendType": result["Backend"] = row.BackendType switch { 1 => "Docker", 2 => "Windows Docker", 3 => "Kubernetes", _ => "Other" }; break;
                 case "isEnabled": result["Enabled"] = row.IsEnabled; break;
                 case "endpoint": result["Endpoint"] = row.Endpoint; break;
+                case "publicHost": result["Public host"] = row.PublicHost; break;
+                case "portRange": result["Port range"] = row.PortRangeStart is null ? null : $"{row.PortRangeStart}-{row.PortRangeEnd}"; break;
                 case "hasCredential": result["Credential configured"] = row.HasCredential; break;
                 case "description": result["Description"] = row.Description; break;
                 case "createdAt": result["Created"] = row.CreatedAt; break;
@@ -684,7 +698,7 @@ public sealed class ContainerCatalogController(ChatsDB db) : ControllerBase
         ContainerQuotaDto row,
         IReadOnlyCollection<string>? selectedColumns)
     {
-        IEnumerable<string> columns = selectedColumns ?? ["id", "user", "allowedNetworkModes", "allowCustomImage", "maxContainerCount", "maxContainerProcesses", "maxCpuCores", "maxMemoryBytes", "maxVolumeBytes", "maxContainerCpuCores", "maxContainerMemoryBytes", "maxVolumeBytesPerVolume", "updatedAt"];
+        IEnumerable<string> columns = selectedColumns ?? ["id", "user", "allowedNetworkModes", "allowCustomImage", "maxContainerCount", "maxContainerProcesses", "maxCpuCores", "maxMemoryBytes", "maxVolumeBytes", "maxContainerCpuCores", "maxContainerMemoryBytes", "maxVolumeBytesPerVolume", "maxPortMappings", "maxPublishedSites", "updatedAt"];
         Dictionary<string, object?> result = new();
         foreach (string column in columns)
         {
@@ -702,6 +716,8 @@ public sealed class ContainerCatalogController(ChatsDB db) : ControllerBase
                 case "maxContainerCpuCores": result["Max CPU per container"] = row.MaxContainerCpuCores; break;
                 case "maxContainerMemoryBytes": result["Max memory per container"] = row.MaxContainerMemoryBytes; break;
                 case "maxVolumeBytesPerVolume": result["Max volume bytes per volume"] = row.MaxVolumeBytesPerVolume; break;
+                case "maxPortMappings": result["Max port mappings"] = row.MaxPortMappings; break;
+                case "maxPublishedSites": result["Max published sites"] = row.MaxPublishedSites; break;
                 case "updatedAt": result["Updated"] = row.UpdatedAt; break;
             }
         }
@@ -887,11 +903,26 @@ public sealed class ContainerCatalogController(ChatsDB db) : ControllerBase
     private static string GetResourceStatus(ContainerResourceAdminDto row)
         => row.DeletedAt is not null ? "Deleted" : row.StoppedAt is not null ? "Stopped" : "Running";
 
+    /// <summary>Port pool must be both null (no port mappings) or both set within 1..65535 with start &lt;= end.</summary>
+    internal static object? ValidatePortRange(RuntimeNodeRequest request)
+    {
+        if (request.PublicHost is { Length: > 253 })
+            return new { Code = "InvalidPublicHost", Message = "Public host is too long." };
+        if (request.PortRangeStart is null && request.PortRangeEnd is null) return null;
+        if (request.PortRangeStart is not int start || request.PortRangeEnd is not int end)
+            return new { Code = "InvalidPortRange", Message = "Port range start and end must both be set or both be empty." };
+        if (start is < 1 or > 65535 || end is < 1 or > 65535)
+            return new { Code = "InvalidPortRange", Message = "Ports must be between 1 and 65535." };
+        if (start > end)
+            return new { Code = "InvalidPortRange", Message = "Port range start must be less than or equal to end." };
+        return null;
+    }
+
     private Task<RuntimeNodeDto?> GetRuntimeNodeDtoAsync(int id, CancellationToken cancellationToken)
         => _db.ContainerRuntimeNodes
             .Where(x => x.Id == id)
             .Select(x => new RuntimeNodeDto(x.Id, x.Name, x.AiName, x.Description, x.BackendType,
-                x.Endpoint, x.Credential != null, x.IsEnabled, x.CreatedAt, x.UpdatedAt))
+                x.Endpoint, x.Credential != null, x.IsEnabled, x.CreatedAt, x.UpdatedAt, x.PublicHost, x.PortRangeStart, x.PortRangeEnd))
             .SingleOrDefaultAsync(cancellationToken);
 
     private static string? NormalizeImageName(string? image)

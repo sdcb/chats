@@ -16,8 +16,10 @@ import {
   IconPlus,
   IconRefresh,
   IconStopFilled,
+  IconWorld,
 } from '@/components/Icons';
 import DeletePopover from '@/components/Popover/DeletePopover';
+import ContainerPortMappingsDialog from '@/components/admin/containers/ContainerPortMappingsDialog';
 import Tips from '@/components/Tips/Tips';
 import IconActionButton from '@/components/common/IconActionButton';
 import {
@@ -108,6 +110,7 @@ type ResourceColumnKey =
   | 'volumeDeclaredBytes'
   | 'volumeMountCount'
   | 'chatAccessCount'
+  | 'portMappingCount'
   | 'actions';
 
 type Props = {
@@ -157,6 +160,8 @@ export default function ContainerResourcesTab({
   const lastFetchKeyRef = useRef('');
   const requestIdRef = useRef(0);
   const [editing, setEditing] = useState<UserContainerResource | null>(null);
+  const [portMappingTarget, setPortMappingTarget] =
+    useState<UserContainerResource | null>(null);
   const [editForm, setEditForm] = useState({
     cpuCores: '',
     memoryBytes: '',
@@ -393,6 +398,13 @@ export default function ContainerResourcesTab({
     ];
     if (isUserMode)
       columns.push({
+        key: 'portMappingCount',
+        title: t('Port mappings'),
+        cell: (row) =>
+          isUserResource(row) ? row.portMappingCount ?? 0 : EMPTY_VALUE,
+      });
+    if (isUserMode)
+      columns.push({
         key: 'actions',
         title: t('Actions'),
         cell: (row) => {
@@ -407,6 +419,15 @@ export default function ContainerResourcesTab({
                 disabled={status === 'deleted'}
                 onClick={() => beginEdit(row)}
               />
+              {row.isPermanent && (
+                <IconActionButton
+                  label={t('Port mappings')}
+                  icon={<IconWorld size={15} />}
+                  className="h-8 w-8"
+                  disabled={status === 'deleted'}
+                  onClick={() => setPortMappingTarget(row)}
+                />
+              )}
               <IconActionButton
                 label={status === 'stopped' ? t('Start') : t('Stop')}
                 icon={
@@ -881,6 +902,14 @@ export default function ContainerResourcesTab({
       />
       {isUserMode && (
         <>
+          <ContainerPortMappingsDialog
+            encryptedId={portMappingTarget?.encryptedId ?? null}
+            containerName={portMappingTarget?.name}
+            onOpenChange={(open) => {
+              if (!open) setPortMappingTarget(null);
+            }}
+            onChanged={() => void loadResources(true)}
+          />
           <Dialog open={createOpen} onOpenChange={setCreateOpen}>
             <DialogContent className="max-w-lg">
               <DialogHeader>

@@ -59,6 +59,8 @@ type RuntimeDataColumnKey =
   | 'backend'
   | 'status'
   | 'endpoint'
+  | 'publicHost'
+  | 'portRange'
   | 'credential'
   | 'templates'
   | 'description'
@@ -73,6 +75,7 @@ const DEFAULT_COLUMNS: RuntimeDataColumnKey[] = [
   'backend',
   'status',
   'endpoint',
+  'portRange',
   'templates',
   'updatedAt',
 ];
@@ -172,6 +175,19 @@ export default function RuntimeNodesTab({
             {row.endpoint || t('System default')}
           </code>
         ),
+      },
+      {
+        key: 'publicHost',
+        title: t('Public host'),
+        cell: (row) => row.publicHost || EMPTY_VALUE,
+      },
+      {
+        key: 'portRange',
+        title: t('Port range'),
+        cell: (row) =>
+          row.portRangeStart != null && row.portRangeEnd != null
+            ? `-${row.portRangeEnd}`
+            : EMPTY_VALUE,
       },
       {
         key: 'credential',
@@ -480,6 +496,57 @@ export default function RuntimeNodesTab({
                 {t('Leave blank to use the host operating system default.')}
               </span>
             </Label>
+            <Label>
+              {t('Public host')}
+              <Input
+                name="runtime-node-public-host"
+                autoComplete="off"
+                spellCheck={false}
+                value={form.publicHost}
+                placeholder="192.168.1.2"
+                onChange={(e) =>
+                  setForm({ ...form, publicHost: e.target.value })
+                }
+              />
+              <span className="text-xs text-muted-foreground">
+                {t(
+                  'Host or IP that gateways use to reach published ports on this node.',
+                )}
+              </span>
+            </Label>
+            <div className="grid grid-cols-2 gap-2">
+              <Label>
+                {t('Port range start')}
+                <Input
+                  type="number"
+                  min={1}
+                  max={65535}
+                  value={form.portRangeStart}
+                  placeholder="41000"
+                  onChange={(e) =>
+                    setForm({ ...form, portRangeStart: e.target.value })
+                  }
+                />
+              </Label>
+              <Label>
+                {t('Port range end')}
+                <Input
+                  type="number"
+                  min={1}
+                  max={65535}
+                  value={form.portRangeEnd}
+                  placeholder="41099"
+                  onChange={(e) =>
+                    setForm({ ...form, portRangeEnd: e.target.value })
+                  }
+                />
+              </Label>
+              <span className="col-span-2 text-xs text-muted-foreground">
+                {t(
+                  'Host port pool for container port mappings. Leave both blank to disable port mappings.',
+                )}
+              </span>
+            </div>
             <Label className="sm:col-span-2">
               {t('Description')}
               <textarea

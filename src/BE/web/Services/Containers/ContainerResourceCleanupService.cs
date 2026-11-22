@@ -30,22 +30,12 @@ public sealed class ContainerResourceCleanupService(
         List<ContainerResource> expired = await db.ContainerResources
             .Where(x => !x.IsPermanent && x.DeletedAt == null && x.CleanupAt != null && x.CleanupAt < now)
             .OrderBy(x => x.CleanupAt).Take(50).Include(x => x.RuntimeNode).Include(x => x.ContainerVolume).ToListAsync(cancellationToken);
+        ContainerRuntimeManager runtime = scope.ServiceProvider.GetRequiredService<ContainerRuntimeManager>();
         foreach (ContainerResource resource in expired)
         {
-            try
-            {
-                if (resource.RuntimeNode.BackendType == 1)
-                    await _backends.Get(resource.RuntimeNode).DeleteContainerAsync(resource.BackendResourceId, cancellationToken);
-            }
-            catch (Exception ex) { _logger.LogWarning(ex, "Failed to delete expired container {ContainerId}", resource.BackendResourceId); }
-            resource.DeletedAt = now;
-            resource.UpdatedAt = now;
-            if (resource.ContainerVolume is { IsStandalone: false } volume)
-            {
-                volume.IsActive = false;
-                volume.DeletedAt = now;
-                volume.UpdatedAt = now;
-            }
+            // Deletes the backend container, deactivates mounts/port mappings and removes the internal docker volume.
+            try { await runtime.ReleaseResourceAsync(resource, now, cancellationToken); }
+            catch (Exception ex) { _logger.LogWarning(ex, "Failed to release expired container {ContainerId}", resource.BackendResourceId); }
         }
         if (expired.Count > 0) await db.SaveChangesAsync(cancellationToken);
     }

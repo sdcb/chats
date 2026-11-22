@@ -209,9 +209,8 @@ public sealed class CodeInterpreterExecutor(
             lines.AddRange(templates
                 .Select(x => $"- {x.Name}: image={x.Image}, runtime={x.RuntimeNode.AiName}, cpu={x.CpuCores:0.##}, memory={x.MemoryBytes}, maxProcesses={x.MaxProcesses}, network={x.BackendNetworkName ?? "default"}"));
         }
-        UserContainerQuotum? quota = await _db.UserContainerQuota.FirstOrDefaultAsync(x => x.UserId == userId, cancellationToken)
-            ?? await _db.UserContainerQuota.FirstOrDefaultAsync(x => x.UserId == null, cancellationToken);
-        lines.Add(quota?.AllowCustomImage == true
+        UserContainerQuotum? quota = await ContainerQuotaResolver.ResolveAsync(_db, userId, cancellationToken);
+        lines.Add(quota?.AllowCustomImage != false
             ? "Custom images are allowed in addition to the catalog."
             : "Only images listed in the catalog may be used; custom images are not allowed.");
         if (lines.Count == 0) return message;
@@ -1114,8 +1113,7 @@ public sealed class CodeInterpreterExecutor(
         if (!string.IsNullOrWhiteSpace(runtimeNode)) templateQuery = templateQuery.Where(x => x.RuntimeNode.AiName == runtimeNode.Trim());
         ContainerResourceTemplate template = await templateQuery.FirstOrDefaultAsync(cancellationToken)
             ?? throw new InvalidOperationException("No AI-visible container template is configured.");
-        UserContainerQuotum? quota = await _db.UserContainerQuota.FirstOrDefaultAsync(x => x.UserId == ctx.CurrentAssistantTurn.Chat.UserId, cancellationToken)
-            ?? await _db.UserContainerQuota.FirstOrDefaultAsync(x => x.UserId == null, cancellationToken);
+        UserContainerQuotum? quota = await ContainerQuotaResolver.ResolveAsync(_db, ctx.CurrentAssistantTurn.Chat.UserId, cancellationToken);
         string effectiveImage = string.IsNullOrWhiteSpace(image) ? template.Image : image.Trim();
         if (quota?.AllowCustomImage == false && !await _db.ContainerImages.AnyAsync(x => x.Image == effectiveImage && x.IsEnabled, cancellationToken))
             throw new InvalidOperationException("The requested image is not enabled in the image catalog.");

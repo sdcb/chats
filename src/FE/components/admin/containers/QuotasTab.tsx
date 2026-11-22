@@ -66,6 +66,8 @@ type QuotaDataColumnKey =
   | 'maxContainerCpuCores'
   | 'maxContainerMemoryBytes'
   | 'maxVolumeBytesPerVolume'
+  | 'maxPortMappings'
+  | 'maxPublishedSites'
   | 'updatedAt';
 
 type QuotaColumnKey = QuotaDataColumnKey | 'actions';
@@ -205,6 +207,16 @@ export default function QuotasTab({
         key: 'maxVolumeBytesPerVolume',
         title: t('Max volume bytes per volume'),
         cell: (row) => formatBytes(row.maxVolumeBytesPerVolume),
+      },
+      {
+        key: 'maxPortMappings',
+        title: t('Max port mappings'),
+        cell: (row) => row.maxPortMappings ?? EMPTY_VALUE,
+      },
+      {
+        key: 'maxPublishedSites',
+        title: t('Max published sites'),
+        cell: (row) => row.maxPublishedSites ?? EMPTY_VALUE,
       },
       {
         key: 'updatedAt',
@@ -462,6 +474,8 @@ export default function QuotasTab({
                 ['maxContainerCpuCores', 'Max CPU per container'],
                 ['maxContainerMemoryBytes', 'Max memory per container'],
                 ['maxVolumeBytesPerVolume', 'Max volume bytes per volume'],
+                ['maxPortMappings', 'Max port mappings'],
+                ['maxPublishedSites', 'Max published sites'],
               ] as const
             ).map(([key, label]) => (
               <Label key={key}>

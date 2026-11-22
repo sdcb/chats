@@ -120,26 +120,35 @@ public class DockerService(CodePodConfig config, ILogger<DockerService>? logger 
             .ToList();
     }
 
-    public async Task<ContainerInfo> CreateContainerCoreAsync(string image, ResourceLimits? resourceLimits = null, string? networkName = null, CancellationToken cancellationToken = default)
+    public Task<ContainerInfo> CreateContainerCoreAsync(string image, ResourceLimits? resourceLimits = null, string? networkName = null, CancellationToken cancellationToken = default)
+        => CreateContainerCoreAsync(image, resourceLimits, networkName, null, cancellationToken);
+
+    /// <summary>
+    /// Builds the Docker create-container request. Pure function (no I/O) so it can be unit tested.
+    /// </summary>
+    public static CreateContainerParameters BuildCreateContainerParameters(
+        CodePodConfig config,
+        string containerName,
+        string image,
+        ResourceLimits limits,
+        string? networkName,
+        ContainerCreateOptions? options,
+        DateTimeOffset createdAt)
     {
-        // 使用指定的资源限制或默认值
-        ResourceLimits limits = resourceLimits ?? config.DefaultResourceLimits;
-        // 验证不超过最大限制
-        limits.Validate(config.MaxResourceLimits);
-
-        // 使用指定的网络模式或默认值
         string network = string.IsNullOrWhiteSpace(networkName) ? "bridge" : networkName.Trim();
-
-        string containerName = $"{config.LabelPrefix}-{Guid.NewGuid():N}";
         Dictionary<string, string> labels = new()
         {
             [$"{config.LabelPrefix}.managed"] = "true",
-            [$"{config.LabelPrefix}.created"] = DateTimeOffset.UtcNow.ToString("o"),
+            [$"{config.LabelPrefix}.created"] = createdAt.ToString("o"),
             [$"{config.LabelPrefix}.memory"] = limits.MemoryBytes.ToString(),
-            [$"{config.LabelPrefix}.cpu"] = limits.CpuCores.ToString("F2"),
+            [$"{config.LabelPrefix}.cpu"] = limits.CpuCores.ToString("F2", System.Globalization.CultureInfo.InvariantCulture),
             [$"{config.LabelPrefix}.pids"] = limits.MaxProcesses.ToString(),
             [$"{config.LabelPrefix}.network"] = network
         };
+        if (options is not null)
+        {
+            foreach ((string key, string value) in options.Labels) labels[key] = value;
+        }
 
         // 构建 HostConfig，Windows 容器不支持某些选项
         HostConfig hostConfig = new()
@@ -149,19 +158,43 @@ public class DockerService(CodePodConfig config, ILogger<DockerService>? logger 
             NanoCPUs = (long)(limits.CpuCores * 1_000_000_000) // 1e9 = 1 CPU
         };
 
+        // Windows 容器不支持 PidsLimit（这是 Linux cgroups 特有功能）
         if (!config.IsWindowsContainer)
         {
-            // Linux 容器：支持 PidsLimit
             hostConfig.PidsLimit = limits.MaxProcesses;
         }
-        else
+
+        Dictionary<string, EmptyStruct>? exposedPorts = null;
+        if (options is not null && options.Mounts.Count > 0)
         {
-            // Windows 容器：Windows Server 2025 支持 Memory 和 CPU 限制
-            // 但不支持 PidsLimit（这是 Linux cgroups 特有功能）
-            logger?.LogDebug("Windows container mode: PidsLimit is not supported");
+            hostConfig.Mounts = [.. options.Mounts.Select(m => new Mount
+            {
+                Type = "volume",
+                Source = m.Source,
+                Target = m.Target,
+                ReadOnly = m.ReadOnly,
+            })];
+        }
+        if (options is not null && options.PortBindings.Count > 0)
+        {
+            exposedPorts = [];
+            Dictionary<string, IList<PortBinding>> bindings = [];
+            foreach (ContainerPortBindingSpec port in options.PortBindings)
+            {
+                string protocol = string.IsNullOrWhiteSpace(port.Protocol) ? "tcp" : port.Protocol.Trim().ToLowerInvariant();
+                string key = $"{port.ContainerPort}/{protocol}";
+                exposedPorts[key] = default;
+                if (!bindings.TryGetValue(key, out IList<PortBinding>? list))
+                {
+                    list = [];
+                    bindings[key] = list;
+                }
+                list.Add(new PortBinding { HostIP = port.HostIp, HostPort = port.HostPort.ToString(System.Globalization.CultureInfo.InvariantCulture) });
+            }
+            hostConfig.PortBindings = bindings;
         }
 
-        CreateContainerResponse response = await _client.Containers.CreateContainerAsync(new CreateContainerParameters
+        return new CreateContainerParameters
         {
             Name = containerName,
             Image = image,
@@ -171,14 +204,41 @@ public class DockerService(CodePodConfig config, ILogger<DockerService>? logger 
             Cmd = config.GetKeepAliveCommand(),
             WorkingDir = config.WorkDir,
             Labels = labels,
+            ExposedPorts = exposedPorts,
             HostConfig = hostConfig
-        }, cancellationToken);
+        };
+    }
 
-        await _client.Containers.StartContainerAsync(response.ID, new ContainerStartParameters(), cancellationToken);
+    public async Task<ContainerInfo> CreateContainerCoreAsync(string image, ResourceLimits? resourceLimits, string? networkName, ContainerCreateOptions? options, CancellationToken cancellationToken = default)
+    {
+        // 使用指定的资源限制或默认值
+        ResourceLimits limits = resourceLimits ?? config.DefaultResourceLimits;
+        // 验证不超过最大限制
+        limits.Validate(config.MaxResourceLimits);
 
-        logger?.LogInformation("Created and started container {ContainerId} (name: {Name}, memory: {Memory}MB, cpu: {Cpu}, pids: {Pids}, network: {Network})",
+        string containerName = $"{config.LabelPrefix}-{Guid.NewGuid():N}";
+        CreateContainerParameters parameters = BuildCreateContainerParameters(config, containerName, image, limits, networkName, options, DateTimeOffset.UtcNow);
+        Dictionary<string, string> labels = new(parameters.Labels);
+        string network = parameters.HostConfig.NetworkMode;
+
+        CreateContainerResponse response = await _client.Containers.CreateContainerAsync(parameters, cancellationToken);
+
+        try
+        {
+            await _client.Containers.StartContainerAsync(response.ID, new ContainerStartParameters(), cancellationToken);
+        }
+        catch
+        {
+            // Do not leak a created-but-unstartable container (e.g. host port already in use).
+            try { await _client.Containers.RemoveContainerAsync(response.ID, new ContainerRemoveParameters { Force = true }, CancellationToken.None); }
+            catch (Exception cleanupEx) { logger?.LogWarning(cleanupEx, "Failed to remove unstartable container {ContainerId}", response.ID); }
+            throw;
+        }
+
+        logger?.LogInformation("Created and started container {ContainerId} (name: {Name}, memory: {Memory}MB, cpu: {Cpu}, pids: {Pids}, network: {Network}, mounts: {Mounts}, ports: {Ports})",
             response.ID[..12], containerName,
-            limits.MemoryBytes / 1024 / 1024, limits.CpuCores, limits.MaxProcesses, network);
+            limits.MemoryBytes / 1024 / 1024, limits.CpuCores, limits.MaxProcesses, network,
+            options?.Mounts.Count ?? 0, options?.PortBindings.Count ?? 0);
 
         // 创建工作目录和 artifacts 目录
         string mkdirCmd = config.GetMkdirCommand(config.WorkDir, $"{config.WorkDir}/{config.ArtifactsDir}");
@@ -317,6 +377,35 @@ public class DockerService(CodePodConfig config, ILogger<DockerService>? logger 
             await DeleteContainerAsync(container.ContainerId, cancellationToken);
         }
         logger?.LogInformation("Deleted {Count} managed containers", containers.Count);
+    }
+
+    public async Task CreateVolumeAsync(string name, IReadOnlyDictionary<string, string>? labels = null, CancellationToken cancellationToken = default)
+    {
+        Dictionary<string, string> allLabels = new()
+        {
+            [$"{config.LabelPrefix}.managed"] = "true",
+            [$"{config.LabelPrefix}.created"] = DateTimeOffset.UtcNow.ToString("o"),
+        };
+        if (labels is not null)
+        {
+            foreach ((string key, string value) in labels) allLabels[key] = value;
+        }
+        // Docker volume create is idempotent for an existing name with the same driver.
+        await _client.Volumes.CreateAsync(new VolumesCreateParameters { Name = name, Labels = allLabels }, cancellationToken);
+        logger?.LogInformation("Ensured docker volume {Volume}", name);
+    }
+
+    public async Task DeleteVolumeAsync(string name, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            await _client.Volumes.RemoveAsync(name, false, cancellationToken);
+            logger?.LogInformation("Deleted docker volume {Volume}", name);
+        }
+        catch (DockerApiException ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
+        {
+            logger?.LogWarning("Docker volume {Volume} not found, already removed", name);
+        }
     }
 
     public Task<CommandExitEvent> ExecuteCommandAsync(string containerId, string[] shellPrefix, string command, string workingDirectory, int timeoutSeconds, CancellationToken cancellationToken = default)

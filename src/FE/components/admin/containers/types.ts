@@ -9,6 +9,9 @@ export type RuntimeNode = {
   isEnabled: boolean;
   createdAt: string;
   updatedAt: string;
+  publicHost: string | null;
+  portRangeStart: number | null;
+  portRangeEnd: number | null;
 };
 
 export type RuntimeNodeFilters = {
@@ -66,6 +69,8 @@ export type Quota = {
   maxContainerMemoryBytes: number | null;
   maxVolumeBytesPerVolume: number | null;
   updatedAt: string;
+  maxPortMappings: number | null;
+  maxPublishedSites: number | null;
 };
 
 export type QuotaFilters = {
@@ -125,6 +130,9 @@ export type RuntimeForm = {
   endpoint: string;
   credential: string;
   isEnabled: boolean;
+  publicHost: string;
+  portRangeStart: string;
+  portRangeEnd: string;
 };
 
 export type TemplateForm = {
@@ -157,6 +165,8 @@ export type QuotaForm = {
   maxContainerCpuCores: string;
   maxContainerMemoryBytes: string;
   maxVolumeBytesPerVolume: string;
+  maxPortMappings: string;
+  maxPublishedSites: string;
 };
 
 export type DeleteTarget = {
@@ -196,6 +206,9 @@ export const emptyRuntime: RuntimeForm = {
   endpoint: '',
   credential: '',
   isEnabled: true,
+  publicHost: '',
+  portRangeStart: '',
+  portRangeEnd: '',
 };
 
 export const emptyTemplate: TemplateForm = {
@@ -228,6 +241,8 @@ export const emptyQuota: QuotaForm = {
   maxContainerCpuCores: '',
   maxContainerMemoryBytes: '',
   maxVolumeBytesPerVolume: '',
+  maxPortMappings: '',
+  maxPublishedSites: '',
 };
 
 export const formatDateTime = (value?: string) => {

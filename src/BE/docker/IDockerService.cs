@@ -25,6 +25,21 @@ public interface IDockerService : IDisposable
     Task<ContainerInfo> CreateContainerCoreAsync(string image, ResourceLimits? resourceLimits = null, string? networkName = null, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// 创建并启动容器，并应用卷挂载、端口映射与额外标签。
+    /// </summary>
+    Task<ContainerInfo> CreateContainerCoreAsync(string image, ResourceLimits? resourceLimits, string? networkName, ContainerCreateOptions? options, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// 创建（或确认已存在）命名卷。
+    /// </summary>
+    Task CreateVolumeAsync(string name, IReadOnlyDictionary<string, string>? labels = null, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// 删除命名卷（不存在时忽略）。
+    /// </summary>
+    Task DeleteVolumeAsync(string name, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// 获取所有受管理的容器
     /// </summary>
     Task<List<ContainerInfo>> GetManagedContainersAsync(CancellationToken cancellationToken = default);

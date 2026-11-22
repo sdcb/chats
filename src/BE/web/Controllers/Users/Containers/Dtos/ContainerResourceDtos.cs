@@ -66,7 +66,8 @@ public sealed record UserContainerResourceDto(
     DateTime? CleanupAt,
     long? VolumeDeclaredBytes,
     int VolumeMountCount,
-    int ChatAccessCount);
+    int ChatAccessCount,
+    int PortMappingCount);
 
 public record UserContainerResourceQuery : PagingRequest
 {

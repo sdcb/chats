@@ -130,6 +130,8 @@ public class Program
         builder.Services.AddScoped<TitleSummaryConfigService>();
         builder.Services.AddScoped<ChatTitleSummaryService>();
         builder.Services.AddScoped<ContainerResourceService>();
+        builder.Services.AddScoped<ContainerRuntimeManager>();
+        builder.Services.AddScoped<ContainerPortMappingService>();
         builder.Services.AddSingleton<ContainerBackendFactory>();
 
         builder.Services.Configure<CodePodConfig>(builder.Configuration.GetSection("CodePod"));

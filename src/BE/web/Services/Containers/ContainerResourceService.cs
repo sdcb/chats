@@ -11,11 +11,13 @@ public sealed class ContainerResourceService(
     ChatsDB db,
     CurrentUser currentUser,
     ContainerBackendFactory backends,
+    ContainerRuntimeManager runtime,
     ILogger<ContainerResourceService> logger)
 {
     private readonly ChatsDB _db = db;
     private readonly CurrentUser _currentUser = currentUser;
     private readonly ContainerBackendFactory _backends = backends;
+    private readonly ContainerRuntimeManager _runtime = runtime;
     private readonly ILogger<ContainerResourceService> _logger = logger;
 
     public async Task<IReadOnlyList<ContainerResource>> ListMineAsync(bool includeDeleted, CancellationToken cancellationToken)
@@ -70,8 +72,44 @@ public sealed class ContainerResourceService(
         };
         await ValidateQuotaAsync(quota, limits, template.DefaultVolumeBytes, null, cancellationToken);
 
-        ContainerInfo backendContainer = await CreateBackendContainerAsync(docker, node, effectiveImage, limits, effectiveNetwork, cancellationToken);
         DateTime now = DateTime.UtcNow;
+        // Permanent containers always get an internal docker volume at the work dir so that data
+        // survives container recreation (mount/port-mapping changes). Temporary containers keep the
+        // previous behaviour (no backend volume).
+        ContainerVolume? internalVolume = null;
+        if (isPermanent || template.DefaultVolumeBytes is not null)
+        {
+            internalVolume = new ContainerVolume
+            {
+                OwnerUserId = _currentUser.Id,
+                RuntimeNodeId = node.Id,
+                IsStandalone = false,
+                Name = "volume",
+                DeclaredBytes = template.DefaultVolumeBytes,
+                IsActive = true,
+                CreatedAt = now,
+                UpdatedAt = now,
+            };
+        }
+        ContainerCreateOptions? options = null;
+        if (isPermanent)
+        {
+            await _runtime.EnsureBackendVolumeAsync(internalVolume!, node, cancellationToken);
+            options = ContainerRuntimeManager.BuildCreateOptions(
+                new ContainerResource { OwnerUserId = _currentUser.Id, IsPermanent = true },
+                docker.Config.WorkDir, internalVolume, [], []);
+        }
+
+        ContainerInfo backendContainer;
+        try
+        {
+            backendContainer = await CreateBackendContainerAsync(docker, node, effectiveImage, limits, effectiveNetwork, options, cancellationToken);
+        }
+        catch
+        {
+            if (internalVolume?.BackendVolumeId is not null) await _runtime.DeleteBackendVolumeAsync(internalVolume, node, CancellationToken.None);
+            throw;
+        }
         ContainerResource resource = new()
         {
             OwnerUserId = _currentUser.Id,
@@ -94,19 +132,10 @@ public sealed class ContainerResourceService(
             CleanupAt = isPermanent ? null : now.AddMinutes(30),
         };
         _db.ContainerResources.Add(resource);
-        if (template.DefaultVolumeBytes is not null)
+        if (internalVolume is not null)
         {
-            resource.ContainerVolume = new ContainerVolume
-            {
-                OwnerUserId = _currentUser.Id,
-                RuntimeNodeId = node.Id,
-                IsStandalone = false,
-                Name = $"{resource.Name}-volume",
-                DeclaredBytes = template.DefaultVolumeBytes,
-                IsActive = true,
-                CreatedAt = now,
-                UpdatedAt = now,
-            };
+            internalVolume.Name = $"{resource.Name}-volume";
+            resource.ContainerVolume = internalVolume;
         }
         await _db.SaveChangesAsync(cancellationToken);
         return resource;
@@ -146,23 +175,8 @@ public sealed class ContainerResourceService(
         if (resource.DeletedAt is not null) return;
         ContainerRuntimeNode node = await _db.ContainerRuntimeNodes.SingleAsync(x => x.Id == resource.RuntimeNodeId, cancellationToken);
         EnsureDockerNode(node);
-        try
-        {
-            await _backends.Get(node).DeleteContainerAsync(resource.BackendResourceId, cancellationToken);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogWarning(ex, "Failed to delete backend container {ContainerId}; marking resource deleted", resource.BackendResourceId);
-        }
-        DateTime now = DateTime.UtcNow;
-        resource.DeletedAt = now;
-        resource.UpdatedAt = now;
-        if (resource.ContainerVolume is not null && !resource.ContainerVolume.IsStandalone)
-        {
-            resource.ContainerVolume.IsActive = false;
-            resource.ContainerVolume.DeletedAt = now;
-            resource.ContainerVolume.UpdatedAt = now;
-        }
+        using IDisposable _ = await ContainerRuntimeManager.LockResourceAsync(resource.Id, cancellationToken);
+        await _runtime.ReleaseResourceAsync(resource, DateTime.UtcNow, cancellationToken);
         await _db.SaveChangesAsync(cancellationToken);
     }
 
@@ -260,9 +274,8 @@ public sealed class ContainerResourceService(
             throw new ContainerResourceException(ContainerResourceErrorCodes.NetworkModeNotAllowed, "Requested network is not allowed.");
     }
 
-    private async Task<UserContainerQuotum?> ResolveQuotaAsync(CancellationToken cancellationToken)
-        => await _db.UserContainerQuota.FirstOrDefaultAsync(x => x.UserId == _currentUser.Id, cancellationToken)
-            ?? await _db.UserContainerQuota.FirstOrDefaultAsync(x => x.UserId == null, cancellationToken);
+    private Task<UserContainerQuotum?> ResolveQuotaAsync(CancellationToken cancellationToken)
+        => ContainerQuotaResolver.ResolveAsync(_db, _currentUser.Id, cancellationToken);
 
     private async Task ValidateQuotaAsync(UserContainerQuotum? quota, ResourceLimits limits, long? volumeBytes, long? excludeId, CancellationToken cancellationToken)
     {
@@ -294,8 +307,13 @@ public sealed class ContainerResourceService(
     public async Task<ContainerVolume> CreateStandaloneVolumeAsync(string name, int runtimeNodeId, string? backendVolumeId, long? declaredBytes, CancellationToken cancellationToken)
     {
         if (declaredBytes is < 0) throw new ContainerResourceException(ContainerResourceErrorCodes.InvalidConfiguration, "Declared volume size cannot be negative.");
-        ContainerRuntimeNode node = await _db.ContainerRuntimeNodes.SingleOrDefaultAsync(x => (runtimeNodeId == 0 ? x.IsEnabled : x.Id == runtimeNodeId && x.IsEnabled), cancellationToken)
+        if (string.IsNullOrWhiteSpace(name)) throw new ContainerResourceException(ContainerResourceErrorCodes.InvalidConfiguration, "Volume name is required.");
+        ContainerRuntimeNode node = await _db.ContainerRuntimeNodes
+            .Where(x => x.IsEnabled && (runtimeNodeId == 0 || x.Id == runtimeNodeId))
+            .OrderBy(x => x.Id)
+            .FirstOrDefaultAsync(cancellationToken)
             ?? throw new ContainerResourceException(ContainerResourceErrorCodes.RuntimeNodeUnavailable, "Runtime node is unavailable.");
+        EnsureDockerNode(node);
         UserContainerQuotum? quota = await ResolveQuotaAsync(cancellationToken);
         if (quota?.MaxVolumeBytesPerVolume is not null && declaredBytes > quota.MaxVolumeBytesPerVolume) throw Quota();
         if (quota?.MaxVolumeBytes is not null)
@@ -309,23 +327,141 @@ public sealed class ContainerResourceService(
             OwnerUserId = _currentUser.Id,
             RuntimeNodeId = node.Id,
             IsStandalone = true,
-            BackendVolumeId = backendVolumeId,
+            // Binding an arbitrary existing docker volume is an admin-only capability.
+            BackendVolumeId = _currentUser.IsAdmin && !string.IsNullOrWhiteSpace(backendVolumeId) ? backendVolumeId.Trim() : null,
             Name = name.Trim(),
             DeclaredBytes = declaredBytes,
             IsActive = true,
             CreatedAt = now,
             UpdatedAt = now,
         };
+        await _runtime.EnsureBackendVolumeAsync(volume, node, cancellationToken);
         _db.ContainerVolumes.Add(volume);
         await _db.SaveChangesAsync(cancellationToken);
         return volume;
     }
 
-    private async Task<ContainerInfo> CreateBackendContainerAsync(IDockerService docker, ContainerRuntimeNode node, string image, ResourceLimits limits, string? network, CancellationToken cancellationToken)
+    /// <summary>Mounts an owned standalone volume into an owned permanent container and recreates the container.</summary>
+    public async Task<ContainerVolumeMount> MountVolumeAsync(long volumeId, long resourceId, string containerPath, bool isReadOnly, CancellationToken cancellationToken)
+    {
+        ContainerVolume volume = await _db.ContainerVolumes.SingleOrDefaultAsync(x => x.Id == volumeId && x.OwnerUserId == _currentUser.Id && x.IsStandalone && x.IsActive, cancellationToken)
+            ?? throw new KeyNotFoundException("Volume was not found.");
+        if (!ContainerRuntimeManager.IsValidContainerPath(containerPath))
+            throw new ContainerResourceException(ContainerResourceErrorCodes.InvalidMountPath, "Mount path must be an absolute container path.");
+        string path = ContainerRuntimeManager.NormalizeContainerPath(containerPath);
+
+        using IDisposable _ = await ContainerRuntimeManager.LockResourceAsync(resourceId, cancellationToken);
+        ContainerResource resource = await _db.ContainerResources.Include(x => x.RuntimeNode)
+            .SingleOrDefaultAsync(x => x.Id == resourceId && x.OwnerUserId == _currentUser.Id, cancellationToken)
+            ?? throw new KeyNotFoundException("Container resource was not found.");
+        EnsureUsable(resource);
+        if (!resource.IsPermanent) throw new ContainerResourceException(ContainerResourceErrorCodes.PermanentContainerRequired, "Volumes can only be mounted into permanent containers.");
+        if (resource.RuntimeNodeId != volume.RuntimeNodeId) throw new ContainerResourceException(ContainerResourceErrorCodes.RuntimeNodeMismatch, "Volume and container must be on the same runtime node.");
+        EnsureDockerNode(resource.RuntimeNode);
+
+        List<ContainerVolumeMount> active = await _db.ContainerVolumeMounts
+            .Where(x => x.ContainerResourceId == resourceId && x.IsActive)
+            .ToListAsync(cancellationToken);
+        ContainerVolumeMount? same = active.FirstOrDefault(x => x.VolumeId == volumeId && ContainerRuntimeManager.NormalizeContainerPath(x.ContainerPath) == path);
+        if (same is not null && same.IsReadOnly == isReadOnly) return same;
+        string workDir = ContainerRuntimeManager.NormalizeContainerPath(_backends.Get(resource.RuntimeNode).Config.WorkDir);
+        if (path == workDir || active.Any(x => x != same && ContainerRuntimeManager.NormalizeContainerPath(x.ContainerPath) == path))
+            throw new ContainerResourceException(ContainerResourceErrorCodes.MountPathConflict, "Another volume is already mounted at this path.");
+
+        DateTime now = DateTime.UtcNow;
+        if (same is not null)
+        {
+            same.IsActive = false;
+            same.UnmountedAt = now;
+        }
+        if (volume.BackendVolumeId is null)
+        {
+            await _runtime.EnsureBackendVolumeAsync(volume, resource.RuntimeNode, cancellationToken);
+            volume.UpdatedAt = now;
+        }
+        ContainerVolumeMount mount = new()
+        {
+            VolumeId = volumeId,
+            ContainerResourceId = resourceId,
+            ContainerPath = path,
+            IsReadOnly = isReadOnly,
+            IsActive = true,
+            MountedAt = now,
+        };
+        _db.ContainerVolumeMounts.Add(mount);
+        await _db.SaveChangesAsync(cancellationToken);
+        try
+        {
+            await _runtime.RecreateAsync(resource, cancellationToken);
+        }
+        catch
+        {
+            mount.IsActive = false;
+            mount.UnmountedAt = DateTime.UtcNow;
+            if (same is not null)
+            {
+                same.IsActive = true;
+                same.UnmountedAt = null;
+            }
+            await _db.SaveChangesAsync(CancellationToken.None);
+            throw;
+        }
+        return mount;
+    }
+
+    public async Task UnmountVolumeAsync(long volumeId, long mountId, CancellationToken cancellationToken)
+    {
+        ContainerVolumeMount probe = await _db.ContainerVolumeMounts.AsNoTracking()
+            .SingleOrDefaultAsync(x => x.Id == mountId && x.VolumeId == volumeId && x.Volume.OwnerUserId == _currentUser.Id && x.IsActive, cancellationToken)
+            ?? throw new KeyNotFoundException("Mount was not found.");
+        using IDisposable _ = await ContainerRuntimeManager.LockResourceAsync(probe.ContainerResourceId, cancellationToken);
+        await UnmountCoreAsync(mountId, cancellationToken);
+    }
+
+    /// <summary>Deletes an owned standalone volume, unmounting it from any container first.</summary>
+    public async Task DeleteStandaloneVolumeAsync(long volumeId, CancellationToken cancellationToken)
+    {
+        ContainerVolume volume = await _db.ContainerVolumes.Include(x => x.RuntimeNode)
+            .SingleOrDefaultAsync(x => x.Id == volumeId && x.OwnerUserId == _currentUser.Id && x.IsStandalone, cancellationToken)
+            ?? throw new KeyNotFoundException("Volume was not found.");
+        if (!volume.IsActive) return;
+        List<ContainerVolumeMount> mounts = await _db.ContainerVolumeMounts.AsNoTracking()
+            .Where(x => x.VolumeId == volumeId && x.IsActive)
+            .ToListAsync(cancellationToken);
+        foreach (ContainerVolumeMount mount in mounts)
+        {
+            using IDisposable _ = await ContainerRuntimeManager.LockResourceAsync(mount.ContainerResourceId, cancellationToken);
+            await UnmountCoreAsync(mount.Id, cancellationToken);
+        }
+        DateTime now = DateTime.UtcNow;
+        volume.IsActive = false;
+        volume.DeletedAt = now;
+        volume.UpdatedAt = now;
+        await _db.SaveChangesAsync(cancellationToken);
+        await _runtime.DeleteBackendVolumeAsync(volume, volume.RuntimeNode, CancellationToken.None);
+    }
+
+    private async Task UnmountCoreAsync(long mountId, CancellationToken cancellationToken)
+    {
+        ContainerVolumeMount mount = await _db.ContainerVolumeMounts
+            .Include(x => x.ContainerResource).ThenInclude(x => x.RuntimeNode)
+            .SingleAsync(x => x.Id == mountId, cancellationToken);
+        if (!mount.IsActive) return;
+        mount.IsActive = false;
+        mount.UnmountedAt = DateTime.UtcNow;
+        await _db.SaveChangesAsync(cancellationToken);
+        ContainerResource resource = mount.ContainerResource;
+        if (resource.DeletedAt is null && resource.IsPermanent)
+        {
+            await _runtime.RecreateAsync(resource, cancellationToken);
+        }
+    }
+
+    private async Task<ContainerInfo> CreateBackendContainerAsync(IDockerService docker, ContainerRuntimeNode node, string image, ResourceLimits limits, string? network, ContainerCreateOptions? options, CancellationToken cancellationToken)
     {
         try
         {
-            return await docker.CreateContainerCoreAsync(image, limits, network, cancellationToken);
+            return await docker.CreateContainerCoreAsync(image, limits, network, options, cancellationToken);
         }
         catch (Exception ex)
         {
