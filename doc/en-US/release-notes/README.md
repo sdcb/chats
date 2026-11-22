@@ -12,6 +12,7 @@ This page indexes all major version release notes for the Chats project, from th
 **Release status**: 1.17.1 is released. This is a security patch release; all users are encouraged to upgrade.
 
 - 🔒 **.NET Security Fix**: rebuilt on .NET 10.0.15 to fix the Brotli decoder vulnerability (CVE-2026-111497)
+- 📦 **Dependency Security Updates**: upgrades EF Core and related packages to 10.0.15 and System.Security.Cryptography.Pkcs to 10.0.13, fixing CVE-2026-84008 and CVE-2026-70162
 - 🛡️ **MCP Permission Hardening**: assigned-user details are limited to admins/owners, and MCP URL and headers are hidden from non-owners (#148)
 - 🖼️ **Image Processing**: adds WebP support and migrates image header parsing from ImageSharp to Sdcb.SimdCodecs 2.0.0
 
