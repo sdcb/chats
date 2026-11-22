@@ -61,19 +61,19 @@ public class McpController(ChatsDB db, CurrentUser currentUser) : ControllerBase
             currentUser.IsAdmin,
             mineOnly);
 
-        ManagementMcpServerDto[] data = await query
+        var rows = await query
                 .OrderBy(x => x.OwnerUserId == currentUser.Id ? 0 : 1) // own first
                 .ThenByDescending(x => x.Id)
-                .Select(x => new ManagementMcpServerDto
+                .Select(x => new
                 {
-                    Id = x.Id,
-                    Name = x.Name,
-                    DisplayName = x.DisplayName,
-                    Url = x.Url,
-                    CreatedAt = x.CreatedAt,
-                    UpdatedAt = x.UpdatedAt,
+                    x.Id,
+                    x.Name,
+                    x.DisplayName,
+                    Editable = currentUser.IsAdmin || x.OwnerUserId == currentUser.Id,
+                    Url = currentUser.IsAdmin || x.OwnerUserId == currentUser.Id ? x.Url : null,
+                    x.CreatedAt,
+                    x.UpdatedAt,
                     ToolsCount = x.McpTools.Count,
-                    Editable = currentUser.IsAdmin || x.OwnerUserId == currentUser.Id, // admin or owner can edit
                     Owner = x.OwnerUser.DisplayName,
                     AssignedUserCount = x.UserMcps.Count,
                     AssignedToMe = x.UserMcps.Any(um => um.UserId == currentUser.Id),
@@ -83,6 +83,37 @@ public class McpController(ChatsDB db, CurrentUser currentUser) : ControllerBase
                         .FirstOrDefault() ?? false,
                 })
                 .ToArrayAsync(cancellationToken);
+
+        ManagementMcpServerDto[] data = [.. rows.Select(x => x.Editable
+            ? (ManagementMcpServerDto)new EditableManagementMcpServerDto
+            {
+                Id = x.Id,
+                Name = x.Name,
+                DisplayName = x.DisplayName,
+                Url = x.Url!,
+                CreatedAt = x.CreatedAt,
+                UpdatedAt = x.UpdatedAt,
+                ToolsCount = x.ToolsCount,
+                Editable = true,
+                Owner = x.Owner,
+                AssignedUserCount = x.AssignedUserCount,
+                AssignedToMe = x.AssignedToMe,
+                ShowShortcut = x.ShowShortcut,
+            }
+            : new ManagementMcpServerDto
+            {
+                Id = x.Id,
+                Name = x.Name,
+                DisplayName = x.DisplayName,
+                CreatedAt = x.CreatedAt,
+                UpdatedAt = x.UpdatedAt,
+                ToolsCount = x.ToolsCount,
+                Editable = false,
+                Owner = x.Owner,
+                AssignedUserCount = x.AssignedUserCount,
+                AssignedToMe = x.AssignedToMe,
+                ShowShortcut = x.ShowShortcut,
+            })];
         return Ok(data);
     }
 
@@ -125,26 +156,36 @@ public class McpController(ChatsDB db, CurrentUser currentUser) : ControllerBase
         return query;
     }
 
+    IQueryable<McpServer> ApplyOwnerOrAdminFilter(IQueryable<McpServer> query)
+    {
+        if (!currentUser.IsAdmin)
+        {
+            query = query.Where(x => x.OwnerUserId == currentUser.Id);
+        }
+
+        return query;
+    }
+
     [HttpGet("{mcpId:int}")]
     public async Task<ActionResult<McpServerDetailsDto>> GetMcpServerDetails(int mcpId, CancellationToken cancellationToken)
     {
         IQueryable<McpServer> query = db.McpServers.Where(x => x.Id == mcpId);
         query = ApplyAdminFilter(query);
 
-        McpServerDetailsDto? dto = await query
-            .Select(x => new McpServerDetailsDto
+        var row = await query
+            .Select(x => new
             {
-                Id = x.Id,
-                Name = x.Name,
-                DisplayName = x.DisplayName,
-                Url = x.Url,
-                Headers = x.Headers,
-                ServerInstructions = x.ServerInstructions,
-                Owner = x.OwnerUser.DisplayName,
-                CreatedAt = x.CreatedAt,
-                UpdatedAt = x.UpdatedAt,
-                ToolsCount = x.McpTools.Count,
+                x.Id,
+                x.Name,
+                x.DisplayName,
                 Editable = currentUser.IsAdmin || x.OwnerUserId == currentUser.Id,
+                Url = currentUser.IsAdmin || x.OwnerUserId == currentUser.Id ? x.Url : null,
+                Headers = currentUser.IsAdmin || x.OwnerUserId == currentUser.Id ? x.Headers : null,
+                x.ServerInstructions,
+                Owner = x.OwnerUser.DisplayName,
+                x.CreatedAt,
+                x.UpdatedAt,
+                ToolsCount = x.McpTools.Count,
                 AssignedUserCount = x.UserMcps.Count,
                 Tools = x.McpTools
                     .OrderBy(t => t.Id)
@@ -161,10 +202,42 @@ public class McpController(ChatsDB db, CurrentUser currentUser) : ControllerBase
                     }).ToList(),
             })
             .FirstOrDefaultAsync(cancellationToken);
-        if (dto == null)
+        if (row == null)
         {
             return NotFound();
         }
+
+        McpServerDetailsDto dto = row.Editable
+            ? new EditableMcpServerDetailsDto
+            {
+                Id = row.Id,
+                Name = row.Name,
+                DisplayName = row.DisplayName,
+                Url = row.Url!,
+                Headers = row.Headers,
+                ServerInstructions = row.ServerInstructions,
+                Owner = row.Owner,
+                CreatedAt = row.CreatedAt,
+                UpdatedAt = row.UpdatedAt,
+                ToolsCount = row.ToolsCount,
+                Editable = true,
+                AssignedUserCount = row.AssignedUserCount,
+                Tools = row.Tools,
+            }
+            : new McpServerDetailsDto
+            {
+                Id = row.Id,
+                Name = row.Name,
+                DisplayName = row.DisplayName,
+                ServerInstructions = row.ServerInstructions,
+                Owner = row.Owner,
+                CreatedAt = row.CreatedAt,
+                UpdatedAt = row.UpdatedAt,
+                ToolsCount = row.ToolsCount,
+                Editable = false,
+                AssignedUserCount = row.AssignedUserCount,
+                Tools = row.Tools,
+            };
         return Ok(dto);
     }
 
@@ -682,8 +755,7 @@ public class McpController(ChatsDB db, CurrentUser currentUser) : ControllerBase
     [HttpGet("{mcpId:int}/assigned-user-details")]
     public async Task<ActionResult<AssignedUserDetailsDto[]>> GetAssignedUserDetails(int mcpId, CancellationToken cancellationToken)
     {
-        IQueryable<McpServer> query = db.McpServers.Where(x => x.Id == mcpId);
-        query = ApplyAdminFilter(query);
+        IQueryable<McpServer> query = ApplyOwnerOrAdminFilter(db.McpServers.Where(x => x.Id == mcpId));
 
         bool hasAccess = await query.AnyAsync(cancellationToken);
         if (!hasAccess)
@@ -737,8 +809,7 @@ public class McpController(ChatsDB db, CurrentUser currentUser) : ControllerBase
     [HttpGet("{mcpId:int}/assigned-user-names")]
     public async Task<ActionResult<AssignedUserNameDto[]>> GetAssignedUserNames(int mcpId, CancellationToken cancellationToken)
     {
-        IQueryable<McpServer> query = db.McpServers.Where(x => x.Id == mcpId && (currentUser.IsAdmin || x.OwnerUserId == currentUser.Id));
-        query = ApplyAdminFilter(query);
+        IQueryable<McpServer> query = ApplyOwnerOrAdminFilter(db.McpServers.Where(x => x.Id == mcpId));
 
         bool hasAccess = await query.AnyAsync(cancellationToken);
         if (!hasAccess)

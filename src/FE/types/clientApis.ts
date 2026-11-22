@@ -433,7 +433,7 @@ export interface McpServerListManagementItemDto {
   id: number;
   name: string;
   displayName: string | null;
-  url: string;
+  url?: string;
   createdAt: string;
   updatedAt: string;
   toolsCount: number;

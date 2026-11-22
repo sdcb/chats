@@ -74,7 +74,7 @@ const McpModal = ({ isOpen, onClose, onSave, server, isCreateMode, isReadOnly = 
       setFormData({
         name: server.name,
         displayName: server.displayName || '',
-        url: server.url,
+        url: server.url || '',
         headers: server.headers || '',
         serverInstructions: server.serverInstructions || '',
       });
@@ -304,35 +304,37 @@ const McpModal = ({ isOpen, onClose, onSave, server, isCreateMode, isReadOnly = 
                   />
                 </div>
 
-                <div>
-                  <Label htmlFor="url">{t('Server URL')}</Label>
-                  <Input
-                    id="url"
-                    value={formData.url}
-                    onChange={(e) => handleInputChange('url', e.target.value)}
-                    placeholder="wss://example.com/mcp"
-                    disabled={isReadOnly}
-                  />
-                </div>
+                {!isReadOnly && (
+                  <>
+                    <div>
+                      <Label htmlFor="url">{t('Server URL')}</Label>
+                      <Input
+                        id="url"
+                        value={formData.url}
+                        onChange={(e) => handleInputChange('url', e.target.value)}
+                        placeholder="wss://example.com/mcp"
+                      />
+                    </div>
 
-                <div>
-                  <Label htmlFor="headers">{t('Headers (JSON)')}</Label>
-                  <Textarea
-                    id="headers"
-                    value={formData.headers}
-                    onChange={(e) => handleInputChange('headers', e.target.value)}
-                    placeholder='{"Authorization": "Bearer token"}'
-                    rows={3}
-                    disabled={isReadOnly}
-                    className={`${formData.headers && !validateJSON(formData.headers)
-                        ? 'border-red-500 focus:border-red-500'
-                        : ''
-                      }`}
-                  />
-                  {formData.headers && !validateJSON(formData.headers) && (
-                    <p className="text-xs text-red-500 mt-1">{t('Headers must be empty or a valid JSON object')}</p>
-                  )}
-                </div>
+                    <div>
+                      <Label htmlFor="headers">{t('Headers (JSON)')}</Label>
+                      <Textarea
+                        id="headers"
+                        value={formData.headers}
+                        onChange={(e) => handleInputChange('headers', e.target.value)}
+                        placeholder='{"Authorization": "Bearer token"}'
+                        rows={3}
+                        className={`${formData.headers && !validateJSON(formData.headers)
+                            ? 'border-red-500 focus:border-red-500'
+                            : ''
+                          }`}
+                      />
+                      {formData.headers && !validateJSON(formData.headers) && (
+                        <p className="text-xs text-red-500 mt-1">{t('Headers must be empty or a valid JSON object')}</p>
+                      )}
+                    </div>
+                  </>
+                )}
 
                 <div>
                   <Label htmlFor="serverInstructions">{t('Server Instructions')}</Label>
