@@ -13,4 +13,5 @@ public enum EncryptionPurpose
     UserId,
     MessageContentId,
     DockerSessionId,
+    ChatRunId,
 }

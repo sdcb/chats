@@ -99,6 +99,7 @@ public class Program
         builder.Services.AddSingleton<BalanceService>();
         builder.Services.AddSingleton<IFileServiceFactory, FileServiceFactory>();
         builder.Services.AddSingleton<ChatStopService>();
+        builder.Services.AddSingleton<Services.AgentRuns.AgentRunManager>();
         builder.Services.AddSingleton<FileImageInfoService>();
         builder.Services.AddSingleton<AsyncCacheUsageManager>();
         builder.Services.AddSingleton<GitHubReleaseChecker>();
@@ -149,6 +150,7 @@ public class Program
         builder.Services.AddHostedService<RequestTraceConfigRefreshService>();
         builder.Services.AddHostedService<RequestTracePersistService>();
         builder.Services.AddHostedService<RequestTraceScheduledDeleteService>();
+        builder.Services.AddHostedService<Services.AgentRuns.ChatRunCleanupService>();
         builder.Services.Configure<ChatOptions>(builder.Configuration.GetSection("Chat"));
 
         builder.Services.AddUrlEncryption();

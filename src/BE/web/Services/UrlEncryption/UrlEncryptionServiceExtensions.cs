@@ -15,6 +15,16 @@ public static class UrlEncryptionServiceExtensions
         return that.DecryptAsInt32(encryptedChatId, EncryptionPurpose.ChatId);
     }
 
+    public static string EncryptChatRunId(this IUrlEncryptionService that, long runId)
+    {
+        return that.Encrypt(runId, EncryptionPurpose.ChatRunId);
+    }
+
+    public static long DecryptChatRunId(this IUrlEncryptionService that, string encryptedRunId)
+    {
+        return that.DecryptAsInt64(encryptedRunId, EncryptionPurpose.ChatRunId);
+    }
+
     public static string EncryptFileId(this IUrlEncryptionService that, int fileId)
     {
         return that.Encrypt(fileId, EncryptionPurpose.FileId);

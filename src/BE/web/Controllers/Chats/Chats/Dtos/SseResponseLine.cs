@@ -1,4 +1,5 @@
-﻿using Chats.DB;
+﻿using Chats.BE.Services.AgentRuns;
+using Chats.DB;
 using Chats.BE.Controllers.Chats.Messages.Dtos;
 using Chats.BE.Services.FileServices;
 using Chats.BE.Services.Models.ChatServices;
@@ -30,6 +31,10 @@ namespace Chats.BE.Controllers.Chats.Chats.Dtos;
 [JsonDerivedType(typeof(ToolCompletedLine    ), (int)SseResponseKind.ToolCompleted    )]
 [JsonDerivedType(typeof(EndStep              ), (int)SseResponseKind.EndStep          )]
 [JsonDerivedType(typeof(EndTurn              ), (int)SseResponseKind.EndTurn          )]
+[JsonDerivedType(typeof(RunStartedLine       ), (int)SseResponseKind.RunStarted       )]
+[JsonDerivedType(typeof(AskQuestionLine      ), (int)SseResponseKind.AskQuestion      )]
+[JsonDerivedType(typeof(SteeringInjectedLine ), (int)SseResponseKind.SteeringInjected )]
+[JsonDerivedType(typeof(SteeringDiscardedLine), (int)SseResponseKind.SteeringDiscarded)]
 public abstract record SseResponseLine
 {
     public static ResponseTurnLine ResponseMessage(
@@ -179,6 +184,34 @@ public sealed record TempStartTurn(
 
 public sealed record SetTitleInternal(
     string Title
+) : SseResponseLine;
+
+public sealed record RunStartedLine(
+    [property: JsonPropertyName("r")] string RunId
+) : SseResponseLine;
+
+public sealed record AskQuestionLine(
+    [property: JsonPropertyName("i")] byte SpanId,
+    [property: JsonPropertyName("u")] string ToolCallId,
+    [property: JsonPropertyName("r")] AskQuestionItem[] Questions
+) : SseResponseLine;
+
+public sealed record SteeringInjectedLine(
+    [property: JsonPropertyName("i")] byte SpanId,
+    [property: JsonPropertyName("r")] long[] SteeringIds
+) : SseResponseLine;
+
+public sealed record SteeringDiscardedLine(
+    [property: JsonPropertyName("r")] SteeringDto[] Items
+) : SseResponseLine;
+
+/// <summary>
+/// Internal: a user steering step was injected into the running assistant turn.
+/// </summary>
+public sealed record SteeringStepInternal(
+    byte SpanId,
+    Step Step,
+    long[] SteeringIds
 ) : SseResponseLine;
 
 #endregion

@@ -20,4 +20,8 @@ public enum SseResponseKind
     CallingTool = 13,
     ToolProgress = 14,
     ToolCompleted = 15,
+    RunStarted = 16,
+    AskQuestion = 17,
+    SteeringInjected = 18,
+    SteeringDiscarded = 19,
 }

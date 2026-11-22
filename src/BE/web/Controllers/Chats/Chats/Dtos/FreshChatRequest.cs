@@ -1,4 +1,5 @@
 ﻿using Chats.BE.Controllers.Chats.Messages.Dtos;
+using Chats.BE.Services.AgentRuns;
 using Chats.BE.Services.UrlEncryption;
 using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Serialization;
@@ -13,6 +14,9 @@ public abstract record EncryptedWebChatRequest
     [JsonPropertyName("timezoneOffset")]
     [Range(-840, 840)]
     public required short TimezoneOffset { get; init; }
+
+    [JsonPropertyName("mode")]
+    public string? Mode { get; init; }
 
     public abstract WebChatRequest Decrypt(IUrlEncryptionService urlEncryption);
 }
@@ -34,6 +38,7 @@ public record EncryptedRegenerateAssistantMessageRequest : EncryptedWebChatReque
         {
             ChatId = urlEncryption.DecryptChatId(EncryptedChatId),
             TimezoneOffset = TimezoneOffset,
+            Mode = ChatRunModes.Normalize(Mode),
             ParentUserMessageId = urlEncryption.DecryptTurnId(ParentUserMessageId),
             SpanId = SpanId,
             ModelId = ModelId
@@ -55,6 +60,7 @@ public record EncryptedRegenerateAllAssistantMessageRequest : EncryptedWebChatRe
         {
             ChatId = urlEncryption.DecryptChatId(EncryptedChatId),
             TimezoneOffset = TimezoneOffset,
+            Mode = ChatRunModes.Normalize(Mode),
             ParentUserMessageId = urlEncryption.DecryptTurnId(ParentUserMessageId),
             ModelId = ModelId
         };
@@ -75,8 +81,39 @@ public record EncryptedGeneralChatRequest : EncryptedWebChatRequest
         {
             ChatId = urlEncryption.DecryptChatId(EncryptedChatId),
             TimezoneOffset = TimezoneOffset,
+            Mode = ChatRunModes.Normalize(Mode),
             UserMessage = UserMessage,
             ParentAssistantMessageId = urlEncryption.DecryptTurnIdOrEmpty(ParentAssistantMessageId)
+        };
+    }
+}
+
+public record EncryptedAnswerQuestionRequest : EncryptedWebChatRequest
+{
+    [JsonPropertyName("turnId")]
+    public required string AssistantTurnId { get; init; }
+
+    [JsonPropertyName("toolCallId")]
+    [Required, StringLength(200)]
+    public required string ToolCallId { get; init; }
+
+    [JsonPropertyName("answers")]
+    public AskQuestionAnswer[] Answers { get; init; } = [];
+
+    [JsonPropertyName("skipped")]
+    public bool Skipped { get; init; }
+
+    public override WebChatRequest Decrypt(IUrlEncryptionService urlEncryption)
+    {
+        return new ContinueTurnRequest
+        {
+            ChatId = urlEncryption.DecryptChatId(EncryptedChatId),
+            TimezoneOffset = TimezoneOffset,
+            Mode = ChatRunModes.Normalize(Mode),
+            AssistantTurnId = urlEncryption.DecryptTurnId(AssistantTurnId),
+            ToolCallId = ToolCallId,
+            Answers = Answers,
+            Skipped = Skipped,
         };
     }
 }
@@ -86,6 +123,8 @@ public abstract record WebChatRequest
     public required int ChatId { get; init; }
 
     public required short TimezoneOffset { get; init; }
+
+    public string Mode { get; init; } = ChatRunModes.Normal;
 
     public abstract long? LastMessageId { get; }
 }
@@ -111,4 +150,23 @@ public record GeneralChatRequest : WebChatRequest
     public required long? ParentAssistantMessageId { get; init; }
 
     public override long? LastMessageId => ParentAssistantMessageId;
+}
+
+/// <summary>
+/// Answers a pending <c>ask_question</c> tool call and continues the same assistant turn.
+/// </summary>
+public record ContinueTurnRequest : WebChatRequest
+{
+    public required long AssistantTurnId { get; init; }
+
+    public required string ToolCallId { get; init; }
+
+    public required AskQuestionAnswer[] Answers { get; init; }
+
+    public required bool Skipped { get; init; }
+
+    /// <summary>Resolved by the controller from the assistant turn's parent.</summary>
+    public long? ParentUserTurnId { get; set; }
+
+    public override long? LastMessageId => ParentUserTurnId;
 }

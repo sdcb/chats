@@ -132,6 +132,24 @@ public sealed class ChatMessageViewService(
         };
     }
 
+    public async Task<TurnDto?> GetTurnDtoAsync(int chatId, long turnId, CancellationToken cancellationToken)
+    {
+        TurnMeta[] turns = await LoadMetadata(chatId, null, cancellationToken);
+        TurnMeta? meta = turns.FirstOrDefault(x => x.Id == turnId);
+        if (meta == null)
+        {
+            return null;
+        }
+
+        ChatTurn? entity = await FullTurnQuery()
+            .AsNoTracking()
+            .AsSplitQuery()
+            .FirstOrDefaultAsync(x => x.Id == turnId && x.ChatId == chatId, cancellationToken);
+        return entity == null
+            ? null
+            : ChatMessageTemp.FromDB(entity).ToDto(urlEncryption, fileUrlProvider, GetSiblingIds(turns, meta));
+    }
+
     private IQueryable<ChatTurn> FullTurnQuery() => db.ChatTurns
         .Include(x => x.Steps).ThenInclude(x => x.StepContents).ThenInclude(x => x.StepContentBlob)
         .Include(x => x.Steps).ThenInclude(x => x.StepContents).ThenInclude(x => x.StepContentFile).ThenInclude(x => x!.File).ThenInclude(x => x.FileService)

@@ -1,4 +1,5 @@
 using Chats.DB;
+using Chats.DB.Enums;
 using Chats.BE.Services.FileServices;
 using Chats.BE.Services.UrlEncryption;
 using System.Text.Json.Serialization;
@@ -22,6 +23,12 @@ public record StepDto
     [JsonPropertyName("createdAt")]
     public required DateTime CreatedAt { get; init; }
 
+    /// <summary>
+    /// True for user-role steps; inside an assistant turn this marks a mid-run steering message.
+    /// </summary>
+    [JsonPropertyName("isUser"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public bool IsUser { get; init; }
+
     public static StepDto FromDB(Step step, FileUrlProvider fup, IUrlEncryptionService urlEncryption)
     {
         return new StepDto
@@ -30,6 +37,7 @@ public record StepDto
             Contents = ContentResponseItem.FromContent([.. step.StepContents.OrderBy(x => x.Id)], fup, urlEncryption),
             Edited = step.Edited,
             CreatedAt = step.CreatedAt,
+            IsUser = step.ChatRoleId == (byte)DBChatRole.User,
         };
     }
 

@@ -1,3 +1,4 @@
+﻿using Chats.BE.Services.AgentRuns;
 using Chats.BE.Controllers.Chats.Chats.Dtos;
 using Chats.BE.Controllers.Chats.Messages.Dtos;
 using Chats.BE.Controllers.Chats.Messages;
@@ -41,6 +42,7 @@ namespace Chats.BE.Controllers.Chats.Chats;
 [Route("api/chats"), Authorize]
 public class ChatController(
     ChatStopService stopService,
+    AgentRunManager agentRunManager,
     ClientInfoManager clientInfoManager,
     IHttpClientFactory httpClientFactory,
     ILoggerFactory loggerFactory,
@@ -54,7 +56,8 @@ public class ChatController(
         string Parameters,
         ToolExecutionKind Kind,
         bool ReadOnly,
-        McpToolExecutionRequest? McpRequest);
+        McpToolExecutionRequest? McpRequest,
+        string? ImmediateError = null);
 
     private sealed record ExecutedToolCall(
         int Index,
@@ -150,6 +153,41 @@ public class ChatController(
             cancellationToken);
     }
 
+    /// <summary>
+    /// Answers (or skips) a pending <c>ask_question</c> tool call and continues the same assistant turn in a new run.
+    /// </summary>
+    [HttpPost("answer-question")]
+    public async Task<IActionResult> AnswerQuestion(
+        [FromBody] EncryptedAnswerQuestionRequest req,
+        [FromServices] ChatsDB db,
+        [FromServices] CurrentUser currentUser,
+        [FromServices] ILogger<ChatController> logger,
+        [FromServices] IUrlEncryptionService idEncryption,
+        [FromServices] ChatRunService chatRunService,
+        [FromServices] UserModelManager userModelManager,
+        [FromServices] FileUrlProvider fup,
+        [FromServices] ChatConfigService chatConfigService,
+        [FromServices] DBFileService dBFileService,
+        [FromServices] CodeInterpreterExecutor codeInterpreter,
+        [FromServices] ChatTitleSummaryService chatTitleSummaryService,
+        CancellationToken cancellationToken)
+    {
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(ModelState);
+        }
+
+        if (!req.Skipped && req.Answers.Length == 0)
+        {
+            return BadRequest("Answers are required unless skipped");
+        }
+
+        return await ChatPrivate(
+            req.Decrypt(idEncryption),
+            db, currentUser, logger, idEncryption, chatRunService, userModelManager, fup, chatConfigService, dBFileService, codeInterpreter, chatTitleSummaryService,
+            cancellationToken);
+    }
+
     private async Task<IActionResult> ChatPrivate(
         WebChatRequest req,
         ChatsDB db,
@@ -181,8 +219,26 @@ public class ChatController(
             return NotFound();
         }
 
+        DateTime runFreshAfter = DateTime.UtcNow - AgentRunManager.HeartbeatTimeout;
+        if (await db.ChatRuns.AnyAsync(x => x.ChatId == chat.Id
+            && x.Status == (byte)ChatRunStatus.Running
+            && x.HeartbeatAt > runFreshAfter, cancellationToken))
+        {
+            return Conflict("A response is still being generated in this chat.");
+        }
+
         Dictionary<long, ChatTurn> existingMessages = chat.ChatTurns.ToDictionary(x => x.Id, x => x);
         bool isEmptyChat = existingMessages.Count == 0;
+
+        ChatTurn? continueTurn = null;
+        if (req is ContinueTurnRequest continueRequest)
+        {
+            if (!existingMessages.TryGetValue(continueRequest.AssistantTurnId, out continueTurn) || continueTurn.IsUser || continueTurn.SpanId == null)
+            {
+                return BadRequest("Invalid turn id");
+            }
+            continueRequest.ParentUserTurnId = continueTurn.ParentId;
+        }
 
         async Task<long[]> GetSiblingIds(long turnId)
         {
@@ -223,6 +279,15 @@ public class ChatController(
             toGenerateSpans = [..chat.ChatSpans
                 .Where(x => x.Enabled)
                 .Select(x => x.Clone())];
+        }
+        else if (continueTurn != null)
+        {
+            ChatSpan? span = chat.ChatSpans.FirstOrDefault(y => y.SpanId == continueTurn.SpanId);
+            if (span == null)
+            {
+                return BadRequest("The span of this turn no longer exists");
+            }
+            toGenerateSpans = [span.Clone()];
         }
         if (toGenerateSpans.Length == 0)
         {
@@ -320,6 +385,42 @@ public class ChatController(
         LinkedList<ChatTurn> messageTreeNoContent = GetMessageTree(existingMessages, req.LastMessageId);
         Step[] messageTree = await FillContents(messageTreeNoContent, db, cancellationToken);
 
+        // A new user message while the previous assistant turn is waiting for an ask_question answer:
+        // close the pending call with a synthetic "skipped" response so the history stays valid.
+        if (req is GeneralChatRequest && messageTreeNoContent.Last is { Value: { IsUser: false } parentAssistantTurn })
+        {
+            string[] pendingAskIds = GetPendingAskQuestionCalls(parentAssistantTurn.Steps).Select(x => x.ToolCallId!).ToArray();
+            if (pendingAskIds.Length > 0)
+            {
+                Step skipStep = CreateToolResponseStep(parentAssistantTurn, pendingAskIds.Select(id => (id, AskQuestionTool.SkippedByNewMessageResponse)));
+                // Steps may be a fixed-size array from FillContents; swap it for a list before EF fix-up touches it.
+                parentAssistantTurn.Steps = [.. parentAssistantTurn.Steps, skipStep];
+                db.Steps.Add(skipStep);
+                messageTree = [.. messageTree, skipStep];
+            }
+        }
+
+        Step? answerStep = null;
+        if (continueTurn != null && req is ContinueTurnRequest answerRequest)
+        {
+            await FillContents(new LinkedList<ChatTurn>([continueTurn]), db, cancellationToken);
+            continueTurn.Steps = [.. continueTurn.Steps.OrderBy(x => x.Id)];
+            StepContentToolCall? askCall = GetPendingAskQuestionCalls(continueTurn.Steps)
+                .FirstOrDefault(x => x.ToolCallId == answerRequest.ToolCallId);
+            if (askCall == null)
+            {
+                return BadRequest("There is no pending question for this tool call");
+            }
+
+            AskQuestionTool.TryParse(askCall.Parameters, out AskQuestionItem[] questions, out _);
+            string answerText = answerRequest.Skipped
+                ? AskQuestionTool.SkippedResponse
+                : AskQuestionTool.FormatAnswers(questions, answerRequest.Answers);
+            answerStep = CreateToolResponseStep(continueTurn, [(answerRequest.ToolCallId, answerText)]);
+            db.Steps.Add(answerStep);
+            continueTurn.Steps.Add(answerStep);
+        }
+
         if (newDbUserTurn != null)
         {
             DateTime utcNow = DateTime.UtcNow;
@@ -357,11 +458,71 @@ public class ChatController(
             primaryText.ContextTemplate = UserContextTemplate.Build(userLocalTime, contributions);
         }
 
+        ChatRunKind runKind = req switch
+        {
+            ContinueTurnRequest => ChatRunKind.Continue,
+            RegenerateAssistantMessageRequest => ChatRunKind.RegenerateOne,
+            RegenerateAllAssistantMessageRequest => ChatRunKind.RegenerateAll,
+            _ => ChatRunKind.General,
+        };
+        DateTime runCreatedAt = DateTime.UtcNow;
+        ChatRun dbRun = new()
+        {
+            ChatId = chat.Id,
+            UserId = currentUser.Id,
+            Kind = (byte)runKind,
+            Status = (byte)ChatRunStatus.Running,
+            InstanceId = AgentRunManager.InstanceId,
+            CreatedAt = runCreatedAt,
+            HeartbeatAt = runCreatedAt,
+        };
+        db.ChatRuns.Add(dbRun);
+        // Persist the user turn (and any synthetic tool responses) together with the run so that
+        // a client refreshing mid-run can rebuild the conversation from the run metadata.
+        await db.SaveChangesAsync(CancellationToken.None);
+        dbRun.Metadata = JSON.Serialize(new ChatRunMetadata
+        {
+            Mode = req.Mode,
+            UserTurnId = newDbUserTurn?.Id,
+            ParentAssistantTurnId = (req as GeneralChatRequest)?.ParentAssistantMessageId,
+            ParentUserTurnId = (req as RegenerateAllAssistantMessageRequest)?.ParentUserMessageId ?? continueTurn?.ParentId,
+            AssistantTurnId = continueTurn?.Id,
+            Spans = [.. toGenerateSpans.Select(x => new ChatRunSpanInfo
+            {
+                SpanId = x.SpanId,
+                ModelId = x.ChatConfig.ModelId!.Value,
+                ModelName = userModels[x.ChatConfig.ModelId!.Value].Model.CurrentSnapshot.Name,
+            })],
+        });
+        await db.SaveChangesAsync(CancellationToken.None);
+
+        LiveRun liveRun = agentRunManager.Register(dbRun.Id, chat.Id, currentUser.Id);
+        _liveRun = liveRun;
+        ChatRunStatus finalRunStatus = ChatRunStatus.Failed;
+        try
+        {
+            cancellationToken = liveRun.Cts.Token;
+            return await RunChat();
+        }
+        finally
+        {
+            await agentRunManager.CompleteAsync(liveRun, finalRunStatus);
+        }
+
+        async Task<IActionResult> RunChat()
+        {
         Response.Headers.ContentType = "text/event-stream";
         Response.Headers.CacheControl = "no-store, no-cache, must-revalidate, max-age=0";
         Response.Headers.Connection = "keep-alive";
         string stopId = stopService.CreateAndCombineCancellationToken(ref cancellationToken);
+        CancellationToken runToken = cancellationToken;
+        await YieldResponse(new RunStartedLine(idEncryption.EncryptChatRunId(dbRun.Id)));
         await YieldResponse(new StopIdLine(stopId));
+        if (answerStep != null)
+        {
+            await YieldResponse(new EndStep(continueTurn!.SpanId!.Value, StepDto.FromDB(answerStep, fup, idEncryption)));
+        }
+        bool interactive = toGenerateSpans.Length == 1;
 
         List<Channel<SseResponseLine>> channels = [.. toGenerateSpans.Select(x => Channel.CreateUnbounded<SseResponseLine>())];
         Dictionary<ImageChatSegment, TaskCompletionSource<DBFile>> imageFileCache = [];
@@ -386,6 +547,10 @@ public class ChatController(
             messageTreeNoContent,
             messageTree,
             newDbUserTurn,
+            continueTurn,
+            req.Mode,
+            interactive,
+            dbRun.Id,
             imageFileCache,
             fileCache,
             channels[index].Writer,
@@ -420,7 +585,10 @@ public class ChatController(
         {
             if (line is TempStartTurn startTurn)
             {
-                chat.ChatTurns.Add(startTurn.Turn);
+                if (!chat.ChatTurns.Contains(startTurn.Turn))
+                {
+                    chat.ChatTurns.Add(startTurn.Turn);
+                }
                 await db.SaveChangesAsync(CancellationToken.None);
             }
             else if (line is EndTurn allEnd)
@@ -447,21 +615,18 @@ public class ChatController(
             }
             else if (line is EndStepInternal endLine)
             {
-                // Attach the new Step to the tracked Turn on the controller thread.
-                // This avoids cross-thread mutations of EF tracked entities (DbContext is not thread-safe).
-                endLine.Step.Turn.Steps.Add(endLine.Step);
-
-                if (endLine.Step.Turn.ChatConfigSnapshot == null)
-                {
-                    ChatSpan chatSpan = toGenerateSpans.Single(x => x.SpanId == endLine.SpanId);
-                    endLine.Step.Turn.ChatConfigSnapshot = await chatConfigService.GetOrCreateChatConfigSnapshot(chatSpan.ChatConfig, default);
-                }
-                chat.UpdatedAt = DateTime.UtcNow;
-                await db.SaveChangesAsync(CancellationToken.None);
+                await AttachAndSaveStep(endLine.SpanId, endLine.Step);
 
                 // Send EndStep to client with StepDto
                 StepDto stepDto = StepDto.FromDB(endLine.Step, fup, idEncryption);
                 await YieldResponse(new EndStep(endLine.SpanId, stepDto));
+            }
+            else if (line is SteeringStepInternal steeringLine)
+            {
+                await AttachAndSaveStep(steeringLine.SpanId, steeringLine.Step);
+                await agentRunManager.SetInjectedStepAsync(steeringLine.SteeringIds, steeringLine.Step.Id);
+                await YieldResponse(new EndStep(steeringLine.SpanId, StepDto.FromDB(steeringLine.Step, fup, idEncryption)));
+                await YieldResponse(new SteeringInjectedLine(steeringLine.SpanId, steeringLine.SteeringIds));
             }
             else if (line is TempImageGeneratedLine tempImageGeneratedLine)
             {
@@ -534,14 +699,74 @@ public class ChatController(
         }
 
         cancellationToken = CancellationToken.None;
+        bool stopped = runToken.IsCancellationRequested;
         stopService.Remove(stopId);
 
         // not cancellable from here
         await Task.WhenAll(streamTasks);
 
+        // Steering messages that were never injected (stopped, or arrived after the last round) go back to the client.
+        SteeringDto[] discardedSteerings = await AgentRunManager.DiscardQueuedSteeringsAsync(db, dbRun.Id);
+        if (discardedSteerings.Length > 0)
+        {
+            await YieldResponse(new SteeringDiscardedLine(discardedSteerings));
+        }
+
         // yield title
         if (isEmptyChat && !hasDedicatedTitleStream) await YieldTitle(chat.Title);
+        finalRunStatus = stopped ? ChatRunStatus.Stopped : ChatRunStatus.Completed;
         return new EmptyResult();
+        }
+
+        async Task AttachAndSaveStep(byte spanId, Step step)
+        {
+            // Attach the new Step to the tracked Turn on the controller thread.
+            // This avoids cross-thread mutations of EF tracked entities (DbContext is not thread-safe).
+            step.Turn.Steps.Add(step);
+
+            if (step.Turn.ChatConfigSnapshot == null)
+            {
+                ChatSpan chatSpan = toGenerateSpans.Single(x => x.SpanId == spanId);
+                step.Turn.ChatConfigSnapshot = await chatConfigService.GetOrCreateChatConfigSnapshot(chatSpan.ChatConfig, default);
+            }
+            chat.UpdatedAt = DateTime.UtcNow;
+            await db.SaveChangesAsync(CancellationToken.None);
+        }
+    }
+
+    internal static IEnumerable<StepContentToolCall> GetPendingAskQuestionCalls(IEnumerable<Step> steps)
+    {
+        StepContent[] contents = [.. steps.OrderBy(x => x.Id).SelectMany(x => x.StepContents)];
+        HashSet<string> answered = [.. contents
+            .Where(x => x.ContentTypeId == (byte)DBStepContentType.ToolCallResponse && x.StepContentToolCallResponse?.ToolCallId != null)
+            .Select(x => x.StepContentToolCallResponse!.ToolCallId!)];
+        return contents
+            .Where(x => x.ContentTypeId == (byte)DBStepContentType.ToolCall
+                && x.StepContentToolCall is { Name: AskQuestionTool.Name, ToolCallId: not null }
+                && !answered.Contains(x.StepContentToolCall.ToolCallId!))
+            .Select(x => x.StepContentToolCall!);
+    }
+
+    private static Step CreateToolResponseStep(ChatTurn turn, IEnumerable<(string ToolCallId, string Response)> responses)
+    {
+        return new Step
+        {
+            Turn = turn,
+            ChatRoleId = (byte)DBChatRole.ToolCall,
+            CreatedAt = DateTime.UtcNow,
+            Edited = false,
+            StepContents = [.. responses.Select(x => new StepContent
+            {
+                StepContentToolCallResponse = new StepContentToolCallResponse
+                {
+                    ToolCallId = x.ToolCallId,
+                    Response = x.Response,
+                    DurationMs = 0,
+                    IsSuccess = true,
+                },
+                ContentTypeId = (byte)DBStepContentType.ToolCallResponse,
+            })],
+        };
     }
 
     private static async Task<Step[]> FillContents(LinkedList<ChatTurn> noContent, ChatsDB db, CancellationToken cancellationToken)
@@ -581,6 +806,10 @@ public class ChatController(
         IEnumerable<ChatTurn> messageTurns,
         IEnumerable<Step> messageTree,
         ChatTurn? dbUserMessage,
+        ChatTurn? continueTurn,
+        string mode,
+        bool interactive,
+        long runId,
         Dictionary<ImageChatSegment, TaskCompletionSource<DBFile>> imageFileCache,
         Dictionary<string, TaskCompletionSource<DBFile>> fileCache,
         ChannelWriter<SseResponseLine> writer,
@@ -589,7 +818,8 @@ public class ChatController(
         CancellationToken cancellationToken)
     {
         // Combine message tree and user message steps, then convert to neutral format
-        List<Step> allSteps = [.. messageTree, .. dbUserMessage?.Steps ?? []];
+        IReadOnlyList<Step> continueSteps = continueTurn == null ? [] : [.. continueTurn.Steps.OrderBy(x => x.Id)];
+        List<Step> allSteps = [.. messageTree, .. dbUserMessage?.Steps ?? [], .. continueSteps];
 
         bool codeExecutionEnabled = chatSpan.ChatConfig.CodeExecutionEnabled;
         bool applyContextTemplate = (DBApiType)chatSpan.ChatConfig.Model!.CurrentSnapshot.ApiTypeId
@@ -598,6 +828,7 @@ public class ChatController(
         IReadOnlyList<Step> filteredHistorySteps = RemoveNonMatchingHistoricalTurnThinkingBlocks(messageTurns, userModel.ModelId);
         IList<NeutralMessage> neutralMessages = filteredHistorySteps
             .Concat(dbUserMessage?.Steps ?? [])
+            .Concat(continueSteps)
             .ToNeutral(chatSpan.SpanId, applyContextTemplate);
         NeutralSystemMessage? systemMessage = chatSpan.ChatConfig.CodeExecutionEnabled
             ? await codeInterpreter.BuildSystemMessageAsync(chatSpan.ChatConfig.SystemPrompt, chat.UserId, cancellationToken)
@@ -610,6 +841,16 @@ public class ChatController(
         systemMessage = McpServerInstructionsBuilder.MergeSystemMessage(
             systemMessage,
             enabledMcpServers);
+        bool askQuestionEnabled = interactive && chatSpan.ChatConfig.Model.CurrentSnapshot.AllowToolCall;
+        if (mode == ChatRunModes.Plan)
+        {
+            string planPrompt = askQuestionEnabled
+                ? AskQuestionTool.PlanModePrompt
+                : AskQuestionTool.PlanModePromptWithoutTool;
+            systemMessage = systemMessage == null
+                ? NeutralSystemMessage.FromText(planPrompt)
+                : NeutralSystemMessage.FromContents([.. systemMessage.Contents, new NeutralSystemContent { Text = planPrompt }]);
+        }
 
         ChatRequest csr = new()
         {
@@ -623,11 +864,22 @@ public class ChatController(
 
         // Build a stable name mapping for tools to avoid collisions while keeping names clean.
         Dictionary<string, McpTool> toolNameMap = new(StringComparer.Ordinal);
-        string[] reservedToolNames = codeExecutionEnabled ? CodeInterpreterExecutor.ToolNames : [];
+        string[] reservedToolNames = [
+            .. codeExecutionEnabled ? CodeInterpreterExecutor.ToolNames : [],
+            .. askQuestionEnabled ? [AskQuestionTool.Name] : Array.Empty<string>()];
 
         if (codeExecutionEnabled)
         {
             codeInterpreter.AddTools(csr.Tools, chatSpan.ChatConfig.Model.CurrentSnapshot.AllowVision);
+        }
+        if (askQuestionEnabled)
+        {
+            csr.Tools.Add(new FunctionTool
+            {
+                FunctionName = AskQuestionTool.Name,
+                FunctionDescription = AskQuestionTool.Description,
+                FunctionParameters = AskQuestionTool.ParametersSchema,
+            });
         }
         IReadOnlyList<McpToolNameMapping> mcpToolMappings = McpToolNameMapper.Build(
             enabledMcpServers.SelectMany(x => x.McpTools),
@@ -644,12 +896,12 @@ public class ChatController(
             });
         }
 
-        ChatTurn turn = new()
+        ChatTurn turn = continueTurn ?? new()
         {
             SpanId = chatSpan.SpanId,
             IsUser = false,
         };
-        if (req is GeneralChatRequest && dbUserMessage != null)
+        if (continueTurn == null && req is GeneralChatRequest && dbUserMessage != null)
         {
             turn.Parent = dbUserMessage;
         }
@@ -685,12 +937,31 @@ public class ChatController(
             bool hasUnfinishedToolCalls = TryGetUnfinishedToolCall(step, out List<StepContentToolCall> unfinishedToolCalls);
 
             List<ResolvedToolCall> resolvedCalls = [];
+            (string ToolCallId, AskQuestionItem[] Questions)? pendingAsk = null;
             for (int index = 0; index < unfinishedToolCalls.Count; index++)
             {
                 StepContentToolCall call = unfinishedToolCalls[index];
                 string callName = call.Name ?? throw new InvalidOperationException("Tool call name is null");
                 string callId = call.ToolCallId ?? throw new InvalidOperationException("Tool call id is null");
                 string parameters = call.Parameters ?? "{}";
+
+                if (askQuestionEnabled && callName == AskQuestionTool.Name)
+                {
+                    if (pendingAsk != null)
+                    {
+                        resolvedCalls.Add(new(index, callId, callName, parameters, ToolExecutionKind.Unknown, false, null,
+                            "Only one ask_question call is allowed per response. Merge your questions into a single call."));
+                    }
+                    else if (!AskQuestionTool.TryParse(parameters, out AskQuestionItem[] questions, out string? askError))
+                    {
+                        resolvedCalls.Add(new(index, callId, callName, parameters, ToolExecutionKind.Unknown, false, null, askError));
+                    }
+                    else
+                    {
+                        pendingAsk = (callId, questions);
+                    }
+                    continue;
+                }
 
                 if (codeExecutionEnabled && codeInterpreter.IsCodeInterpreterTool(callName))
                 {
@@ -771,11 +1042,46 @@ public class ChatController(
                         });
                     }
                 }
+
+                if (pendingAsk != null)
+                {
+                    // Suspend: the run ends here and the turn waits (indefinitely) for the user's answer.
+                    writer.TryWrite(new AskQuestionLine(chatSpan.SpanId, pendingAsk.Value.ToolCallId, pendingAsk.Value.Questions));
+                    break;
+                }
+
+                if (interactive && !cancellationToken.IsCancellationRequested)
+                {
+                    await TryInjectSteeringAsync();
+                }
+            }
+            else if (interactive && !cancellationToken.IsCancellationRequested && await TryInjectSteeringAsync())
+            {
+                // Steering arrived after the final answer: run one more round so the model can respond to it.
+                continue;
             }
             else
             {
                 break;
             }
+        }
+
+        async Task<bool> TryInjectSteeringAsync()
+        {
+            (long Id, string Content)[] claimed = await agentRunManager.ClaimQueuedSteeringsAsync(runId, cancellationToken);
+            if (claimed.Length == 0) return false;
+
+            Step steeringStep = new()
+            {
+                Turn = turn,
+                ChatRoleId = (byte)DBChatRole.User,
+                CreatedAt = DateTime.UtcNow,
+                Edited = false,
+                StepContents = [StepContent.FromText(string.Join("\n\n", claimed.Select(x => x.Content)))],
+            };
+            csr.Messages.Add(steeringStep.ToNeutral());
+            writer.TryWrite(new SteeringStepInternal(chatSpan.SpanId, steeringStep, [.. claimed.Select(x => x.Id)]));
+            return true;
         }
 
         async Task<ExecutedToolCall> ExecuteCall(ResolvedToolCall call, McpToolExecutionScope mcpExecutionScope)
@@ -865,7 +1171,7 @@ public class ChatController(
 
         ExecutedToolCall CompleteUnknownCall(ResolvedToolCall call)
         {
-            string result = $"Unknown tool: {call.ExposedName}";
+            string result = call.ImmediateError ?? $"Unknown tool: {call.ExposedName}";
             writer.TryWrite(new ToolCompletedLine(chatSpan.SpanId, false, call.ToolCallId, result));
             return new(call.Index, call.ToolCallId, false, result, 0, []);
         }
@@ -1148,13 +1454,34 @@ public class ChatController(
 
     private readonly static ReadOnlyMemory<byte> dataU8 = "data: "u8.ToArray();
     private readonly static ReadOnlyMemory<byte> lfu8 = "\r\n\r\n"u8.ToArray();
+    private LiveRun? _liveRun;
+    private bool _clientGone;
 
+    /// <summary>
+    /// Records the event in the current run (for resuming clients) and streams it to the original client if still connected.
+    /// The run keeps executing after the client disconnects.
+    /// </summary>
     private async Task YieldResponse(SseResponseLine line)
     {
-        await Response.Body.WriteAsync(dataU8);
-        await Response.Body.WriteAsync(JsonSerializer.SerializeToUtf8Bytes(line, JSON.JsonSerializerOptions));
-        await Response.Body.WriteAsync(lfu8);
-        await Response.Body.FlushAsync();
+        byte[] json = JsonSerializer.SerializeToUtf8Bytes(line, JSON.JsonSerializerOptions);
+        int? seq = _liveRun?.Append(System.Text.Encoding.UTF8.GetString(json));
+        if (_clientGone) return;
+
+        try
+        {
+            if (seq != null)
+            {
+                await Response.Body.WriteAsync(System.Text.Encoding.ASCII.GetBytes($"id: {seq}\r\n"));
+            }
+            await Response.Body.WriteAsync(dataU8);
+            await Response.Body.WriteAsync(json);
+            await Response.Body.WriteAsync(lfu8);
+            await Response.Body.FlushAsync();
+        }
+        catch (Exception) when (HttpContext.RequestAborted.IsCancellationRequested || _liveRun != null)
+        {
+            _clientGone = true;
+        }
     }
 
     static LinkedList<ChatTurn> GetMessageTree(Dictionary<long, ChatTurn> existingMessages, long? fromParentId)
