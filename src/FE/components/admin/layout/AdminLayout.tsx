@@ -25,6 +25,7 @@ import {
   IconShieldLock,
   IconUserCog,
   IconUsers,
+  IconWorld,
 } from '@/components/Icons/index';
 import UserMenuPopover, {
   PageType,
@@ -220,6 +221,13 @@ const AdminLayout = ({
         <IconDesktop strokeWidth={1.2} stroke={stroke} />
       ),
       title: t('Container Management'),
+    },
+    {
+      url: '/admin/websites',
+      icon: (stroke?: string) => (
+        <IconWorld strokeWidth={1.2} stroke={stroke} />
+      ),
+      title: t('Website Hosting'),
     },
     {
       url: '/admin/global-configs',

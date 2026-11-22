@@ -34,6 +34,7 @@ using Chats.BE.Services.Mcp;
 using Chats.BE.Services.Options;
 using Chats.BE.Services.RequestTracing;
 using Chats.BE.Services.TitleSummary;
+using Chats.BE.Services.WebsiteHosting;
 using Chats.BE.Services.UserContext;
 using Microsoft.Extensions.Options;
 
@@ -47,7 +48,8 @@ public class ChatController(
     IHttpClientFactory httpClientFactory,
     ILoggerFactory loggerFactory,
     McpToolExecutionPlanner mcpToolExecutionPlanner,
-    McpToolExecutionService mcpToolExecutionService) : ControllerBase
+    McpToolExecutionService mcpToolExecutionService,
+    WebsiteTools websiteTools) : ControllerBase
 {
     private sealed record ResolvedToolCall(
         int Index,
@@ -868,13 +870,21 @@ public class ChatController(
 
         // Build a stable name mapping for tools to avoid collisions while keeping names clean.
         Dictionary<string, McpTool> toolNameMap = new(StringComparer.Ordinal);
+        // Website tools: only when the owner can publish somewhere and the chat sees a running permanent container.
+        bool websiteToolsEnabled = chatSpan.ChatConfig.Model.CurrentSnapshot.AllowToolCall
+            && await websiteTools.IsAvailableAsync(chat.UserId, chat.Id, cancellationToken);
         string[] reservedToolNames = [
             .. codeExecutionEnabled ? CodeInterpreterExecutor.ToolNames : [],
+            .. websiteToolsEnabled ? WebsiteTools.ToolNames : [],
             .. askQuestionEnabled ? [AskQuestionTool.Name] : Array.Empty<string>()];
 
         if (codeExecutionEnabled)
         {
             codeInterpreter.AddTools(csr.Tools, chatSpan.ChatConfig.Model.CurrentSnapshot.AllowVision);
+        }
+        if (websiteToolsEnabled)
+        {
+            WebsiteTools.AddTools(csr.Tools);
         }
         if (askQuestionEnabled)
         {
@@ -970,6 +980,12 @@ public class ChatController(
                 if (codeExecutionEnabled && codeInterpreter.IsCodeInterpreterTool(callName))
                 {
                     resolvedCalls.Add(new(index, callId, callName, parameters, ToolExecutionKind.CodeInterpreter, false, null));
+                    continue;
+                }
+
+                if (websiteToolsEnabled && WebsiteTools.IsTool(callName))
+                {
+                    resolvedCalls.Add(new(index, callId, callName, parameters, ToolExecutionKind.Website, WebsiteTools.IsReadOnlyTool(callName), null));
                     continue;
                 }
 
@@ -1094,6 +1110,7 @@ public class ChatController(
             {
                 ToolExecutionKind.Mcp => await ExecuteMcpCall(call, mcpExecutionScope),
                 ToolExecutionKind.CodeInterpreter => await ExecuteCodeInterpreterCall(call),
+                ToolExecutionKind.Website => await ExecuteWebsiteCall(call),
                 _ => CompleteUnknownCall(call),
             };
         }
@@ -1171,6 +1188,14 @@ public class ChatController(
             }
 
             return new(call.Index, call.ToolCallId, success, result, (int)stopwatch.ElapsedMilliseconds, artifacts);
+        }
+
+        async Task<ExecutedToolCall> ExecuteWebsiteCall(ResolvedToolCall call)
+        {
+            Stopwatch stopwatch = Stopwatch.StartNew();
+            (bool success, string result) = await websiteTools.ExecuteAsync(chat.UserId, chat.Id, call.ExposedName, call.Parameters, cancellationToken);
+            writer.TryWrite(new ToolCompletedLine(chatSpan.SpanId, success, call.ToolCallId, result));
+            return new(call.Index, call.ToolCallId, success, result, (int)stopwatch.ElapsedMilliseconds, []);
         }
 
         ExecutedToolCall CompleteUnknownCall(ResolvedToolCall call)

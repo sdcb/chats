@@ -14,6 +14,7 @@ import {
   IconRobot,
   IconSettings,
   IconUser,
+  IconWorld,
 } from '@/components/Icons';
 import ContainerResourcesTab from '@/components/admin/containers/ContainerResourcesTab';
 import AccountTab from '@/components/settings/tabs/AccountTab';
@@ -23,6 +24,7 @@ import PromptsTab from '@/components/settings/tabs/PromptsTab';
 import TitleSummaryTab from '@/components/settings/tabs/TitleSummaryTab';
 import UsageRecordsTab from '@/components/settings/tabs/UsageRecordsTab';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import MyWebsitesTab from '@/components/websites/MyWebsitesTab';
 
 const SettingsPage = () => {
   const { t } = useTranslation();
@@ -99,6 +101,13 @@ const SettingsPage = () => {
             {t('Docker containers')}
           </TabsTrigger>
           <TabsTrigger
+            value="websites"
+            className="flex-1 items-center sm:flex-none gap-1"
+          >
+            <IconWorld />
+            {t('Websites')}
+          </TabsTrigger>
+          <TabsTrigger
             value="account"
             className="flex-1 items-center sm:flex-none gap-1"
           >
@@ -124,6 +133,9 @@ const SettingsPage = () => {
           </TabsContent>
           <TabsContent value="containers" className="m-0 h-full">
             <ContainerResourcesTab mode="user" settingsTab="containers" />
+          </TabsContent>
+          <TabsContent value="websites" className="m-0 h-full">
+            {activeTab === 'websites' && <MyWebsitesTab />}
           </TabsContent>
           <TabsContent value="account" className="m-0 h-full">
             <AccountTab />

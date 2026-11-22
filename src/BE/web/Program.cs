@@ -150,6 +150,7 @@ public class Program
             .ValidateOnStart();
         builder.Services.AddScoped<CodeInterpreterExecutor>();
         builder.Services.AddHostedService<ContainerResourceCleanupService>();
+        Services.WebsiteHosting.WebsiteHostingServiceCollectionExtensions.AddWebsiteHosting(builder.Services, builder.Configuration);
         builder.Services.AddHostedService<RequestTraceConfigRefreshService>();
         builder.Services.AddHostedService<RequestTracePersistService>();
         builder.Services.AddHostedService<RequestTraceScheduledDeleteService>();

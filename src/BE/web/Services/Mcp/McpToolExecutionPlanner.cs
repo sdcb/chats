@@ -5,6 +5,7 @@ public enum ToolExecutionKind
     Mcp,
     CodeInterpreter,
     Unknown,
+    Website,
 }
 
 public sealed record ToolExecutionPlanItem<T>(T Value, ToolExecutionKind Kind, bool ReadOnly);
