@@ -168,6 +168,14 @@ jobs:
             arch: arm64
     runs-on: ${{ matrix.runs-on }}
     steps:
+      - name: Start Docker engine (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          Get-Service docker
+          Start-Service docker
+          docker version
+
       - name: Login container
         run: echo ${{ secrets.DOCKER_PASSWORD }} | docker login -u ${{ vars.DOCKER_USERNAME }} ${{ vars.DOCKER_REGISTRY }} --password-stdin
 
