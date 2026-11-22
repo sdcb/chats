@@ -3,9 +3,6 @@ using Chats.BE.Services.CodeInterpreter;
 using Chats.BE.Services.Models.ChatServices.OpenAI;
 using Chats.DB;
 using Microsoft.Extensions.DependencyInjection;
-using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.Formats.Png;
-using SixLabors.ImageSharp.PixelFormats;
 
 namespace Chats.BE.UnitTest.CodeInterpreter;
 
@@ -107,10 +104,6 @@ public sealed class CodeInterpreterViewImageTests
 
     private static byte[] CreateValidPngBytes()
     {
-        using Image<Rgba32> image = new(1, 1);
-        image[0, 0] = new Rgba32(255, 0, 0, 255);
-        using MemoryStream stream = new();
-        image.Save(stream, new PngEncoder());
-        return stream.ToArray();
+        return Convert.FromBase64String("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==");
     }
 }

@@ -1,5 +1,6 @@
-﻿using Chats.DB;
-using SixLabors.ImageSharp;
+using Chats.DB;
+using Sdcb.SimdCodecs;
+using Sdcb.SimdCodecs.Abstractions;
 
 namespace Chats.BE.Services.FileServices;
 
@@ -28,18 +29,17 @@ public class FileImageInfoService(ILogger<FileImageInfoService> logger)
 
         try
         {
-            ImageInfo image = Image.Identify(imageBytes);
-            if (image == null)
+            if (ImageCodecs.TryReadInfo(imageBytes, out ImageInfo info))
             {
-                logger.LogWarning("Failed to identify image for {fileName}({contentType})", fileName, contentType);
-                return null;
+                return new FileImageInfo
+                {
+                    Width = info.Width,
+                    Height = info.Height
+                };
             }
 
-            return new FileImageInfo
-            {
-                Width = image.Width,
-                Height = image.Height
-            };
+            logger.LogWarning("Failed to identify image for {fileName}({contentType})", fileName, contentType);
+            return null;
         }
         catch (Exception e)
         {

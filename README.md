@@ -18,18 +18,17 @@ Sdcb Chats 是一个强大且灵活的大语言模型前端，支持 22+ 主流 
 
 <img alt="chats" src="https://github.com/user-attachments/assets/106ece3f-d94d-460e-9313-4a01f624a647" />
 
-## 🆕 最新版本（1.17.0）
+## 🆕 最新版本（1.17.1）
 
-- 📅 发布日期：2026-08-27
-- ⚡ 响应速度统计：Token 速度排除首 Token（TTFT）等待时间，仅统计生成阶段
-- 🖼️ 图像生成背景模式：支持默认、`auto`、`opaque` 和 `transparent`
-- 🧠 模型上下文提示词：图像生成直接使用用户原文，保留必要运行时上下文
-- 🌳 聊天分支稳定性：修复实时 SSE 分支元数据和无效子树请求
-- 👥 用户管理：拆分用户编辑和修改密码表单，改善密码管理器兼容性
-- 🐛 稳定性修复：修复图像接口重复 `/v1`、缺少模型校验并增加回归测试
-- ⬆️ 升级重点：SQL Server 和 SQLite 部署需运行对应的 `1.17.0` 数据库迁移脚本
+- 📅 发布日期：2026-11-22
+- 🔒 安全补丁版本，建议所有用户升级
+- 🛡️ .NET 安全修复：基于 .NET 10.0.15 重新构建，修复 Brotli 解码器漏洞（CVE-2026-111497）
+- 📦 依赖安全更新：EF Core 等依赖升级到 10.0.15，System.Security.Cryptography.Pkcs 升级到 10.0.13，修复 CVE-2026-84008 和 CVE-2026-70162
+- 🔑 MCP 权限加固：修复被分配用户可读取其他用户自定义 Headers 的问题（#148），非所有者不再可见 MCP URL 和 Headers
+- 🖼️ 图像处理：新增 WebP 支持，图像头解析迁移到 Sdcb.SimdCodecs 2.0.0
+- ⬆️ 升级提示：使用框架依赖版（`chats.zip`）需将 ASP.NET Core 运行时升级到 10.0.14 或更高；从 1.16 及更早版本升级时，SQL Server 和 SQLite 部署仍需运行 `1.17.0` 数据库迁移脚本
 
-👉 [查看 1.17.0 发布说明](./doc/zh-CN/release-notes/1.x/1.17.0.md) · [查看全部版本](./doc/zh-CN/release-notes/README.md)
+👉 [查看 1.17.1 发布说明](./doc/zh-CN/release-notes/1.x/1.17.1.md) · [查看全部版本](./doc/zh-CN/release-notes/README.md)
 
 ## 快速开始
 
@@ -77,19 +76,24 @@ Chats 使用 `C#`/`TypeScript` 开发，以下是完整的文档资源：
 
 - **GitHub Issues**：[https://github.com/sdcb/chats/issues](https://github.com/sdcb/chats/issues)
 - **QQ 群**：498452653 [![加入QQ群](https://img.shields.io/badge/QQ_Group-498452653-52B6EF?style=flat&logo=tencent-qq)](https://qm.qq.com/q/AM8tY9cAsS)
-- **微信群** ![](https://io.starworks.cc:88/cv-public/2026/chats-wxg-qr.png?t=0827) 如果微信群已满，请加 QQ 群获取临时入群二维码。
+- **微信群** ![](https://io.starworks.cc:88/cv-public/2026/chats-wxg-qr.png?t=1122) 如果微信群已满，请加 QQ 群获取临时入群二维码。
+
+---
+
+## 特别感谢
+
+<div align="left">
+  <h1>RoutinAI</h1>
+  <img width="154" height="151" src="https://routin.ai/favicon.png"/>
+</div>
+
+[RoutinAI](https://routin.ai/) 是一个企业级统一 LLM API 网关，提供单一、类型安全的接口，可访问来自 GPT、Claude 和 Gemini 系列的 100 多个主流大语言模型，包括 gpt-5.6-sol、claude-opus-5 和 gemini-3.1-pro-preview 等模型。它通过提供零延迟边缘路由、无需修改代码即可无缝切换模型、统一计费以及带有消费上限和访问策略的集中治理，消除了管理多个 AI 供应商的复杂性。
 
 ---
 
 ## 许可证
 
 本项目采用 [Apache 2.0](LICENSE) 开源许可证。
-
----
-
-## Star History
-
-[![Star History Chart](https://api.star-history.com/svg?repos=sdcb/chats&type=Date)](https://star-history.com/#sdcb/chats&Date)
 
 ---
 
