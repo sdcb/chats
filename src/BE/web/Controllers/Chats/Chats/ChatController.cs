@@ -418,7 +418,11 @@ public class ChatController(
                 : AskQuestionTool.FormatAnswers(questions, answerRequest.Answers);
             answerStep = CreateToolResponseStep(continueTurn, [(answerRequest.ToolCallId, answerText)]);
             db.Steps.Add(answerStep);
-            continueTurn.Steps.Add(answerStep);
+            // EF fix-up may already have attached it through the Turn navigation; never send it twice.
+            if (!continueTurn.Steps.Contains(answerStep))
+            {
+                continueTurn.Steps.Add(answerStep);
+            }
         }
 
         if (newDbUserTurn != null)
