@@ -8,20 +8,21 @@ import useTranslation from '@/hooks/useTranslation';
 import {
   IconArrowDown,
   IconBulb,
+  IconDocker,
   IconMoneybag,
   IconNotes,
+  IconRobot,
   IconSettings,
   IconUser,
-  IconRobot,
 } from '@/components/Icons';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-
+import ContainerResourcesTab from '@/components/admin/containers/ContainerResourcesTab';
 import AccountTab from '@/components/settings/tabs/AccountTab';
 import GeneralTab from '@/components/settings/tabs/GeneralTab';
-import PromptsTab from '@/components/settings/tabs/PromptsTab';
 import McpTab from '@/components/settings/tabs/McpTab';
+import PromptsTab from '@/components/settings/tabs/PromptsTab';
 import TitleSummaryTab from '@/components/settings/tabs/TitleSummaryTab';
 import UsageRecordsTab from '@/components/settings/tabs/UsageRecordsTab';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 const SettingsPage = () => {
   const { t } = useTranslation();
@@ -91,6 +92,13 @@ const SettingsPage = () => {
             {t('Usage Records')}
           </TabsTrigger>
           <TabsTrigger
+            value="containers"
+            className="flex-1 items-center sm:flex-none gap-1"
+          >
+            <IconDocker />
+            {t('Docker containers')}
+          </TabsTrigger>
+          <TabsTrigger
             value="account"
             className="flex-1 items-center sm:flex-none gap-1"
           >
@@ -113,6 +121,9 @@ const SettingsPage = () => {
           </TabsContent>
           <TabsContent value="usage" className="m-0 h-full">
             <UsageRecordsTab />
+          </TabsContent>
+          <TabsContent value="containers" className="m-0 h-full">
+            <ContainerResourcesTab mode="user" settingsTab="containers" />
           </TabsContent>
           <TabsContent value="account" className="m-0 h-full">
             <AccountTab />

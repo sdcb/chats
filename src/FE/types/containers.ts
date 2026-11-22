@@ -17,6 +17,36 @@ export type ContainerResource = {
   grantedChatIds: string[];
 };
 
+export type UserContainerResource = {
+  id: number;
+  encryptedId: string;
+  ownerChatId: number | null;
+  ownerChatTitle: string | null;
+  ownerTurnId: number | null;
+  runtimeNodeId: number;
+  runtimeNodeName: string | null;
+  runtimeNodeAIName: string | null;
+  isPermanent: boolean;
+  backendResourceId: string;
+  ip: string | null;
+  name: string;
+  image: string;
+  shellPrefix: string | null;
+  cpuCores: number | null;
+  memoryBytes: number | null;
+  maxProcesses: number | null;
+  backendNetworkName: string | null;
+  createdAt: string;
+  updatedAt: string;
+  lastActiveAt: string | null;
+  stoppedAt: string | null;
+  deletedAt: string | null;
+  cleanupAt: string | null;
+  volumeDeclaredBytes: number | null;
+  volumeMountCount: number;
+  chatAccessCount: number;
+};
+
 export type CreateContainerResourceRequest = {
   name?: string | null;
   isPermanent: boolean;

@@ -18,7 +18,11 @@ import {
   ContainerResource,
   ContainerTemplate,
   CreateContainerResourceRequest,
+  UserContainerResource,
 } from '@/types/containers';
+import { PageResult } from '@/types/page';
+
+import { ContainerResourceFilters } from '@/components/admin/containers/types';
 
 type FetchOptions = {
   signal?: AbortSignal;
@@ -103,10 +107,7 @@ export const createChatContainer = (
   });
 };
 
-export const deleteChatContainer = (
-  chatId: string,
-  encryptedId: string,
-) => {
+export const deleteChatContainer = (chatId: string, encryptedId: string) => {
   const fetchService = createFetchClient();
   return fetchService.delete<void>(
     `/api/containers/${encodeURIComponent(encryptedId)}`,
@@ -243,9 +244,7 @@ export const getContainerEnvironmentVariables = (
 ) => {
   const fetchService = createFetchClient();
   return fetchService.get<EnvironmentVariablesResponse>(
-    `/api/containers/${encodeURIComponent(
-      encryptedId,
-    )}/environment-variables`,
+    `/api/containers/${encodeURIComponent(encryptedId)}/environment-variables`,
     { suppressDefaultToast: true },
   );
 };
@@ -257,9 +256,7 @@ export const saveContainerUserEnvironmentVariables = (
 ) => {
   const fetchService = createFetchClient();
   return fetchService.put<void>(
-    `/api/containers/${encodeURIComponent(
-      encryptedId,
-    )}/environment-variables`,
+    `/api/containers/${encodeURIComponent(encryptedId)}/environment-variables`,
     { body, suppressDefaultToast: true },
   );
 };
@@ -276,6 +273,29 @@ export const listContainers = (includeDeleted = false) =>
   createFetchClient().get<ContainerResource[]>(
     `/api/containers?includeDeleted=${includeDeleted}`,
   );
+
+export type UserContainerResourceQuery = ContainerResourceFilters & {
+  page: number;
+  pageSize: number;
+};
+
+export const getUserContainerResources = (
+  params: UserContainerResourceQuery,
+): Promise<PageResult<UserContainerResource[]>> =>
+  createFetchClient().get('/api/containers/resources', {
+    params: {
+      page: params.page,
+      pageSize: params.pageSize,
+      id: params.id || undefined,
+      query: params.query || undefined,
+      runtimeNodeId: params.runtimeNodeId || undefined,
+      status: params.status || undefined,
+      permanent: params.permanent || undefined,
+    },
+  });
+
+export const USER_CONTAINER_RESOURCES_EXPORT_URL =
+  '/api/containers/resources/export';
 export const listContainersForChat = (chatId: string) =>
   createFetchClient().get<ContainerResource[]>(
     `/api/containers/for-chat/${encodeURIComponent(chatId)}`,
@@ -332,5 +352,3 @@ export const unmountVolume = (id: number, mountId: number) =>
   createFetchClient().delete<void>(`/api/volumes/${id}/mounts/${mountId}`);
 export const deleteVolume = (id: number) =>
   createFetchClient().delete<void>(`/api/volumes/${id}`);
-
-
