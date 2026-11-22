@@ -76,7 +76,7 @@ env:
     playwright@1.60.0
   NUGET_PRECACHE: >-
     ClosedXML
-    SixLabors.ImageSharp
+    Sdcb.SimdCodecs
     DocumentFormat.OpenXml
 
 jobs:
