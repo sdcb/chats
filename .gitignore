@@ -10,8 +10,8 @@ src/FE/node_modules
 
 # next.js
 src/FE/.next
-src/FE/public/sw.js
-src/FE/public/workbox-*.js
+src/FE/public/sw.js*
+src/FE/public/swe-worker*
 src/FE/public/vendor/monaco
 
 src/FE/out

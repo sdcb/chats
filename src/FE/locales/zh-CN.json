@@ -1297,5 +1297,10 @@
   "Website unpublished": "网站已下线",
   "Websites": "网站",
   "Websites are published as <subdomain>.<domain>. The domain must belong to the DNS zone managed by the provider.": "网站将以 <子域名>.<域名> 的形式发布。域名必须属于该服务商管理的 DNS 区域。",
-  "Websites unpublished": "已下线网站"
+  "Websites unpublished": "已下线网站",
+  "A new version of Chats is available": "Chats 有新版本可用",
+  "Later": "稍后",
+  "You are offline": "当前处于离线状态",
+  "Please check your network connection and try again.": "请检查网络连接后重试。",
+  "Retry": "重试"
 }

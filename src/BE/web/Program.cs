@@ -184,13 +184,12 @@ public class Program
         app.UseAuthorization();
         app.MapControllers();
         app.UseMiddleware<FrontendMiddleware>();
-        app.UseStaticFiles();
+        FileExtensionContentTypeProvider contentTypeProvider = new();
+        contentTypeProvider.Mappings[".avif"] = "image/avif";
         app.UseStaticFiles(new StaticFileOptions()
         {
-            ContentTypeProvider = new FileExtensionContentTypeProvider(new Dictionary<string, string>
-            {
-                [".avif"] = "image/avif",
-            })
+            ContentTypeProvider = contentTypeProvider,
+            OnPrepareResponse = ctx => FrontendMiddleware.ApplyCacheHeaders(ctx.Context),
         });
 
         // before run:

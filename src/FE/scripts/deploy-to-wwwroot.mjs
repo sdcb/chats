@@ -2,7 +2,7 @@
 /**
  * Deploy `next build` output (out/) to BE web wwwroot.
  *
- * - Clears wwwroot completely (removes stale PWA workbox/sw.js etc.)
+ * - Clears wwwroot completely (removes stale PWA sw.js etc.)
  * - Re-creates .gitkeep so the directory stays tracked by git
  * - Copies out/ contents into wwwroot
  *

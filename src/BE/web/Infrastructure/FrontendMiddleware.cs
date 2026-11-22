@@ -61,4 +61,22 @@ public class FrontendMiddleware(RequestDelegate next, IWebHostEnvironment webHos
     }
 
     private static bool IsGetOrHeadMethod(string method) => HttpMethods.IsGet(method) || HttpMethods.IsHead(method);
+
+    public static void ApplyCacheHeaders(HttpContext context)
+    {
+        PathString path = context.Request.Path;
+        if (path.StartsWithSegments("/_next/static"))
+        {
+            // Content-hashed build output never changes for a given URL.
+            context.Response.Headers.CacheControl = "public, max-age=31536000, immutable";
+        }
+        else if (path.Value is string value &&
+            (value.EndsWith(".html", StringComparison.OrdinalIgnoreCase) ||
+             value.Equals("/sw.js", StringComparison.OrdinalIgnoreCase) ||
+             value.Equals("/manifest.json", StringComparison.OrdinalIgnoreCase)))
+        {
+            // Must be revalidated on every load so new deployments (and service worker updates) are picked up.
+            context.Response.Headers.CacheControl = "no-cache";
+        }
+    }
 }

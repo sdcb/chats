@@ -2,8 +2,10 @@ import { useEffect, useState } from 'react';
 import { Toaster } from 'react-hot-toast';
 
 import type { AppProps } from 'next/app';
+import Head from 'next/head';
 import { useRouter } from 'next/router';
 
+import { getLanguage } from '@/utils/language';
 import { DEFAULT_FONT_SIZE, getSettings } from '@/utils/settings';
 import { getUserInfo } from '@/utils/user';
 
@@ -12,6 +14,7 @@ import { UserRole } from '@/types/adminApis';
 import ErrorPage from './_error';
 import AdminLayout from '@/components/admin/layout/AdminLayout';
 import BuildLayout from '@/components/build/layout/BuildLayout';
+import usePwaUpdatePrompt from '@/hooks/usePwaUpdatePrompt';
 import './globals.css';
 
 import { ThemeProvider } from '@/providers/ThemeProvider';
@@ -21,9 +24,12 @@ function App({ Component, pageProps }: AppProps<{}> | any) {
 
   const [isClient, setIsClient] = useState(false);
 
+  usePwaUpdatePrompt();
+
   useEffect(() => {
     setIsClient(true);
     document.title = 'Chats';
+    document.documentElement.lang = getLanguage();
     // Apply saved font size on app start
     const settings = getSettings();
     const fontSize = settings.fontSize ?? DEFAULT_FONT_SIZE;
@@ -41,6 +47,12 @@ function App({ Component, pageProps }: AppProps<{}> | any) {
       enableSystem
       disableTransitionOnChange
     >
+      <Head>
+        <meta
+          name="viewport"
+          content="width=device-width, initial-scale=1, viewport-fit=cover"
+        />
+      </Head>
       <Toaster />
       {isClient &&
         (route.pathname.includes('/admin') ? (

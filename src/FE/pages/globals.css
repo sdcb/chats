@@ -273,3 +273,13 @@ div {
   --rdp-background-color: hsl(var(--background));
   --rdp-accent-color-dark: hsl(var(--primary-foreground));
 }
+
+/* iOS Safari zooms the page when focusing a field smaller than 16px; since the viewport
+   no longer disables user zoom, keep form fields at least 16px there. */
+@supports (-webkit-touch-callout: none) {
+  input,
+  textarea,
+  select {
+    font-size: max(16px, 1em) !important;
+  }
+}
