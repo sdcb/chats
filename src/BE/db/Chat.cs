@@ -40,6 +40,9 @@ public partial class Chat
     public virtual ChatGroup? ChatGroup { get; set; }
 
     [InverseProperty("Chat")]
+    public virtual ICollection<ChatRun> ChatRuns { get; set; } = new List<ChatRun>();
+
+    [InverseProperty("Chat")]
     public virtual ICollection<ChatShare> ChatShares { get; set; } = new List<ChatShare>();
 
     [InverseProperty("Chat")]

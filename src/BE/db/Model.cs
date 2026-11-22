@@ -7,7 +7,6 @@ using Microsoft.EntityFrameworkCore;
 namespace Chats.DB;
 
 [Table("Model")]
-[Index("CurrentSnapshotId", Name = "UX_Model_CurrentSnapshotId", IsUnique = true)]
 public partial class Model
 {
     [Key]

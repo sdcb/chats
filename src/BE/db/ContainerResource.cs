@@ -7,9 +7,6 @@ using Microsoft.EntityFrameworkCore;
 namespace Chats.DB;
 
 [Table("ContainerResource")]
-[Index("CleanupAt", Name = "IX_ContainerResource_CleanupAt")]
-[Index("OwnerChatId", "OwnerTurnId", "DeletedAt", "StoppedAt", Name = "IX_ContainerResource_OwnerChat_Turn_Deleted_Stopped")]
-[Index("OwnerTurnId", "Name", Name = "IX_ContainerResource_OwnerTurn_Name")]
 [Index("OwnerUserId", "DeletedAt", "StoppedAt", "IsPermanent", Name = "IX_ContainerResource_OwnerUser_Deleted_Stopped")]
 [Index("RuntimeNodeId", "DeletedAt", "StoppedAt", Name = "IX_ContainerResource_RuntimeNode_Deleted_Stopped")]
 [Index("RuntimeNodeId", "BackendResourceId", Name = "UX_ContainerResource_RuntimeNode_BackendResource", IsUnique = true)]
@@ -73,6 +70,9 @@ public partial class ContainerResource
     public virtual ICollection<ChatContainerResourceAccess> ChatContainerResourceAccesses { get; set; } = new List<ChatContainerResourceAccess>();
 
     [InverseProperty("ContainerResource")]
+    public virtual ICollection<ContainerPortMapping> ContainerPortMappings { get; set; } = new List<ContainerPortMapping>();
+
+    [InverseProperty("ContainerResource")]
     public virtual ContainerVolume? ContainerVolume { get; set; }
 
     [InverseProperty("ContainerResource")]
@@ -89,6 +89,9 @@ public partial class ContainerResource
     [ForeignKey("OwnerUserId")]
     [InverseProperty("ContainerResources")]
     public virtual User OwnerUser { get; set; } = null!;
+
+    [InverseProperty("ContainerResource")]
+    public virtual ICollection<PublishedSite> PublishedSites { get; set; } = new List<PublishedSite>();
 
     [ForeignKey("RuntimeNodeId")]
     [InverseProperty("ContainerResources")]

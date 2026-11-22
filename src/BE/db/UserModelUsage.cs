@@ -7,9 +7,7 @@ using Microsoft.EntityFrameworkCore;
 namespace Chats.DB;
 
 [Table("UserModelUsage")]
-[Index("BalanceTransactionId", Name = "IX_ModelUsage_BalanceTransaction", IsUnique = true)]
 [Index("CreatedAt", Name = "IX_ModelUsage_CreatedAt")]
-[Index("UsageTransactionId", Name = "IX_ModelUsage_UsageTransaction", IsUnique = true)]
 [Index("ModelSnapshotId", Name = "IX_UserModelUsage_ModelSnapshotId")]
 [Index("UserId", Name = "IX_UserModelUsage_UserId")]
 public partial class UserModelUsage

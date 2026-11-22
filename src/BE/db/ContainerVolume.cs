@@ -8,7 +8,6 @@ namespace Chats.DB;
 
 [Table("ContainerVolume")]
 [Index("OwnerUserId", "IsActive", "IsStandalone", Name = "IX_ContainerVolume_OwnerUser_Active")]
-[Index("ContainerResourceId", Name = "UX_ContainerVolume_InternalContainer", IsUnique = true)]
 public partial class ContainerVolume
 {
     [Key]

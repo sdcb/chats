@@ -6,8 +6,6 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Chats.DB;
 
-[Index("UserId", Name = "UX_UserContainerQuota_Default", IsUnique = true)]
-[Index("UserId", Name = "UX_UserContainerQuota_User", IsUnique = true)]
 public partial class UserContainerQuotum
 {
     [Key]
@@ -38,6 +36,10 @@ public partial class UserContainerQuotum
     public long? MaxVolumeBytesPerVolume { get; set; }
 
     public DateTime UpdatedAt { get; set; }
+
+    public int? MaxPortMappings { get; set; }
+
+    public int? MaxPublishedSites { get; set; }
 
     [ForeignKey("UserId")]
     [InverseProperty("UserContainerQuotum")]

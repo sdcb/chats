@@ -7,7 +7,6 @@ using Microsoft.EntityFrameworkCore;
 namespace Chats.DB;
 
 [Table("ModelKey")]
-[Index("CurrentSnapshotId", Name = "UX_ModelKey_CurrentSnapshotId", IsUnique = true)]
 public partial class ModelKey
 {
     [Key]
@@ -24,4 +23,7 @@ public partial class ModelKey
     [ForeignKey("CurrentSnapshotId")]
     [InverseProperty("ModelKey")]
     public virtual ModelKeySnapshot CurrentSnapshot { get; set; } = null!;
+
+    [InverseProperty("ModelKey")]
+    public virtual ICollection<ProviderFileMapping> ProviderFileMappings { get; set; } = new List<ProviderFileMapping>();
 }

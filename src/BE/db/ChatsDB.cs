@@ -29,6 +29,12 @@ public partial class ChatsDB : DbContext
 
     public virtual DbSet<ChatPresetSpan> ChatPresetSpans { get; set; }
 
+    public virtual DbSet<ChatRun> ChatRuns { get; set; }
+
+    public virtual DbSet<ChatRunEvent> ChatRunEvents { get; set; }
+
+    public virtual DbSet<ChatRunSteering> ChatRunSteerings { get; set; }
+
     public virtual DbSet<ChatShare> ChatShares { get; set; }
 
     public virtual DbSet<ChatSpan> ChatSpans { get; set; }
@@ -47,6 +53,8 @@ public partial class ChatsDB : DbContext
 
     public virtual DbSet<ContainerImage> ContainerImages { get; set; }
 
+    public virtual DbSet<ContainerPortMapping> ContainerPortMappings { get; set; }
+
     public virtual DbSet<ContainerResource> ContainerResources { get; set; }
 
     public virtual DbSet<ContainerResourceTemplate> ContainerResourceTemplates { get; set; }
@@ -57,6 +65,8 @@ public partial class ChatsDB : DbContext
 
     public virtual DbSet<ContainerVolumeMount> ContainerVolumeMounts { get; set; }
 
+    public virtual DbSet<DnsProvider> DnsProviders { get; set; }
+
     public virtual DbSet<File> Files { get; set; }
 
     public virtual DbSet<FileImageInfo> FileImageInfos { get; set; }
@@ -64,6 +74,8 @@ public partial class ChatsDB : DbContext
     public virtual DbSet<FileService> FileServices { get; set; }
 
     public virtual DbSet<FinishReason> FinishReasons { get; set; }
+
+    public virtual DbSet<HostedDomain> HostedDomains { get; set; }
 
     public virtual DbSet<InvitationCode> InvitationCodes { get; set; }
 
@@ -88,6 +100,12 @@ public partial class ChatsDB : DbContext
     public virtual DbSet<PasswordAttempt> PasswordAttempts { get; set; }
 
     public virtual DbSet<Prompt> Prompts { get; set; }
+
+    public virtual DbSet<ProviderFileMapping> ProviderFileMappings { get; set; }
+
+    public virtual DbSet<PublishedSite> PublishedSites { get; set; }
+
+    public virtual DbSet<PublishedSiteEvent> PublishedSiteEvents { get; set; }
 
     public virtual DbSet<RequestTrace> RequestTraces { get; set; }
 
@@ -144,6 +162,8 @@ public partial class ChatsDB : DbContext
     public virtual DbSet<UserModel> UserModels { get; set; }
 
     public virtual DbSet<UserModelUsage> UserModelUsages { get; set; }
+
+    public virtual DbSet<WebGateway> WebGateways { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -205,6 +225,12 @@ public partial class ChatsDB : DbContext
 
         modelBuilder.Entity<ChatConfigSnapshot>(entity =>
         {
+            entity.HasIndex(e => e.HashCode, "IX_ChatConfigSnapshot_HashCode").HasFilter("([HashCode] IS NOT NULL)");
+
+            entity.HasIndex(e => new { e.ModelSnapshotId, e.HashCode }, "UX_ChatConfigSnapshot_ModelSnapshotId_HashCode")
+                .IsUnique()
+                .HasFilter("([HashCode] IS NOT NULL)");
+
             entity.HasOne(d => d.ModelSnapshot).WithMany(p => p.ChatConfigSnapshots)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_ChatConfigSnapshot_ModelSnapshot");
@@ -212,6 +238,8 @@ public partial class ChatsDB : DbContext
 
         modelBuilder.Entity<ChatContainerResourceAccess>(entity =>
         {
+            entity.Property(e => e.GrantedAt).HasDefaultValueSql("(sysutcdatetime())", "DF_ChatContainerAccess_GrantedAt");
+
             entity.HasOne(d => d.Chat).WithMany(p => p.ChatContainerResourceAccesses)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_ChatContainerAccess_Chat");
@@ -240,6 +268,36 @@ public partial class ChatsDB : DbContext
                 .HasConstraintName("FK_ChatPresetSpan_Config");
 
             entity.HasOne(d => d.ChatPreset).WithMany(p => p.ChatPresetSpans).HasConstraintName("FK_ChatPresetSpan_Preset");
+        });
+
+        modelBuilder.Entity<ChatRun>(entity =>
+        {
+            entity.HasIndex(e => e.CompletedAt, "IX_ChatRun_CompletedAt").HasFilter("([CompletedAt] IS NOT NULL)");
+
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("(sysutcdatetime())", "DF_ChatRun_CreatedAt");
+            entity.Property(e => e.HeartbeatAt).HasDefaultValueSql("(sysutcdatetime())", "DF_ChatRun_HeartbeatAt");
+            entity.Property(e => e.Status).HasDefaultValue((byte)1, "DF_ChatRun_Status");
+
+            entity.HasOne(d => d.Chat).WithMany(p => p.ChatRuns).HasConstraintName("FK_ChatRun_Chat");
+
+            entity.HasOne(d => d.User).WithMany(p => p.ChatRuns)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_ChatRun_User");
+        });
+
+        modelBuilder.Entity<ChatRunEvent>(entity =>
+        {
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("(sysutcdatetime())", "DF_ChatRunEvent_CreatedAt");
+
+            entity.HasOne(d => d.Run).WithMany(p => p.ChatRunEvents).HasConstraintName("FK_ChatRunEvent_Run");
+        });
+
+        modelBuilder.Entity<ChatRunSteering>(entity =>
+        {
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("(sysutcdatetime())", "DF_ChatRunSteering_CreatedAt");
+            entity.Property(e => e.Status).HasDefaultValue((byte)1, "DF_ChatRunSteering_Status");
+
+            entity.HasOne(d => d.Run).WithMany(p => p.ChatRunSteerings).HasConstraintName("FK_ChatRunSteering_Run");
         });
 
         modelBuilder.Entity<ChatShare>(entity =>
@@ -283,8 +341,45 @@ public partial class ChatsDB : DbContext
             entity.HasKey(e => e.Key).HasName("PK_Configs");
         });
 
+        modelBuilder.Entity<ContainerImage>(entity =>
+        {
+            entity.Property(e => e.IsEnabled).HasDefaultValue(true, "DF_ContainerImage_IsEnabled");
+        });
+
+        modelBuilder.Entity<ContainerPortMapping>(entity =>
+        {
+            entity.HasIndex(e => new { e.ContainerResourceId, e.ContainerPort, e.Protocol }, "UX_ContainerPortMapping_ContainerPort")
+                .IsUnique()
+                .HasFilter("([IsActive]=(1))");
+
+            entity.HasIndex(e => new { e.RuntimeNodeId, e.HostPort, e.Protocol }, "UX_ContainerPortMapping_NodeHostPort")
+                .IsUnique()
+                .HasFilter("([IsActive]=(1))");
+
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("(sysutcdatetime())", "DF_ContainerPortMapping_CreatedAt");
+            entity.Property(e => e.IsActive).HasDefaultValue(true, "DF_ContainerPortMapping_IsActive");
+            entity.Property(e => e.Protocol).HasDefaultValue("tcp", "DF_ContainerPortMapping_Protocol");
+
+            entity.HasOne(d => d.ContainerResource).WithMany(p => p.ContainerPortMappings)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_ContainerPortMapping_Container");
+
+            entity.HasOne(d => d.RuntimeNode).WithMany(p => p.ContainerPortMappings)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_ContainerPortMapping_RuntimeNode");
+        });
+
         modelBuilder.Entity<ContainerResource>(entity =>
         {
+            entity.HasIndex(e => e.CleanupAt, "IX_ContainerResource_CleanupAt").HasFilter("([CleanupAt] IS NOT NULL AND [DeletedAt] IS NULL)");
+
+            entity.HasIndex(e => new { e.OwnerChatId, e.OwnerTurnId, e.DeletedAt, e.StoppedAt }, "IX_ContainerResource_OwnerChat_Turn_Deleted_Stopped").HasFilter("([OwnerChatId] IS NOT NULL)");
+
+            entity.HasIndex(e => new { e.OwnerTurnId, e.Name }, "IX_ContainerResource_OwnerTurn_Name").HasFilter("([OwnerTurnId] IS NOT NULL)");
+
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("(sysutcdatetime())", "DF_ContainerResource_CreatedAt");
+            entity.Property(e => e.UpdatedAt).HasDefaultValueSql("(sysutcdatetime())", "DF_ContainerResource_UpdatedAt");
+
             entity.HasOne(d => d.OwnerChat).WithMany(p => p.ContainerResources).HasConstraintName("FK_ContainerResource_Chat");
 
             entity.HasOne(d => d.OwnerTurn).WithMany(p => p.ContainerResources)
@@ -302,13 +397,32 @@ public partial class ChatsDB : DbContext
 
         modelBuilder.Entity<ContainerResourceTemplate>(entity =>
         {
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("(sysutcdatetime())", "DF_ContainerTemplate_CreatedAt");
+            entity.Property(e => e.UpdatedAt).HasDefaultValueSql("(sysutcdatetime())", "DF_ContainerTemplate_UpdatedAt");
+            entity.Property(e => e.Visibility).HasDefaultValue((byte)3, "DF_ContainerTemplate_Visibility");
+
             entity.HasOne(d => d.RuntimeNode).WithMany(p => p.ContainerResourceTemplates)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_ContainerResourceTemplate_RuntimeNode");
         });
 
+        modelBuilder.Entity<ContainerRuntimeNode>(entity =>
+        {
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("(sysutcdatetime())", "DF_ContainerRuntimeNode_CreatedAt");
+            entity.Property(e => e.IsEnabled).HasDefaultValue(true, "DF_ContainerRuntimeNode_IsEnabled");
+            entity.Property(e => e.UpdatedAt).HasDefaultValueSql("(sysutcdatetime())", "DF_ContainerRuntimeNode_UpdatedAt");
+        });
+
         modelBuilder.Entity<ContainerVolume>(entity =>
         {
+            entity.HasIndex(e => e.ContainerResourceId, "UX_ContainerVolume_InternalContainer")
+                .IsUnique()
+                .HasFilter("([IsStandalone]=(0) AND [ContainerResourceId] IS NOT NULL)");
+
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("(sysutcdatetime())", "DF_ContainerVolume_CreatedAt");
+            entity.Property(e => e.IsActive).HasDefaultValue(true, "DF_ContainerVolume_IsActive");
+            entity.Property(e => e.UpdatedAt).HasDefaultValueSql("(sysutcdatetime())", "DF_ContainerVolume_UpdatedAt");
+
             entity.HasOne(d => d.ContainerResource).WithOne(p => p.ContainerVolume).HasConstraintName("FK_ContainerVolume_Container");
 
             entity.HasOne(d => d.OwnerUser).WithMany(p => p.ContainerVolumes)
@@ -322,6 +436,13 @@ public partial class ChatsDB : DbContext
 
         modelBuilder.Entity<ContainerVolumeMount>(entity =>
         {
+            entity.HasIndex(e => new { e.VolumeId, e.ContainerResourceId, e.ContainerPath }, "UX_ContainerVolumeMount_ActivePath")
+                .IsUnique()
+                .HasFilter("([IsActive]=(1))");
+
+            entity.Property(e => e.IsActive).HasDefaultValue(true, "DF_ContainerVolumeMount_Active");
+            entity.Property(e => e.MountedAt).HasDefaultValueSql("(sysutcdatetime())", "DF_ContainerVolumeMount_MountedAt");
+
             entity.HasOne(d => d.ContainerResource).WithMany(p => p.ContainerVolumeMounts)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_ContainerVolumeMount_Container");
@@ -329,6 +450,13 @@ public partial class ChatsDB : DbContext
             entity.HasOne(d => d.Volume).WithMany(p => p.ContainerVolumeMounts)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_ContainerVolumeMount_Volume");
+        });
+
+        modelBuilder.Entity<DnsProvider>(entity =>
+        {
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("(sysutcdatetime())", "DF_DnsProvider_CreatedAt");
+            entity.Property(e => e.IsEnabled).HasDefaultValue(true, "DF_DnsProvider_IsEnabled");
+            entity.Property(e => e.UpdatedAt).HasDefaultValueSql("(sysutcdatetime())", "DF_DnsProvider_UpdatedAt");
         });
 
         modelBuilder.Entity<File>(entity =>
@@ -356,6 +484,23 @@ public partial class ChatsDB : DbContext
         modelBuilder.Entity<FileService>(entity =>
         {
             entity.HasKey(e => e.Id).HasName("PK_FileServices2");
+        });
+
+        modelBuilder.Entity<HostedDomain>(entity =>
+        {
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("(sysutcdatetime())", "DF_HostedDomain_CreatedAt");
+            entity.Property(e => e.IsEnabled).HasDefaultValue(true, "DF_HostedDomain_IsEnabled");
+            entity.Property(e => e.RecordMode).HasDefaultValue((byte)1, "DF_HostedDomain_RecordMode");
+            entity.Property(e => e.RecordTtl).HasDefaultValue(600, "DF_HostedDomain_RecordTtl");
+            entity.Property(e => e.UpdatedAt).HasDefaultValueSql("(sysutcdatetime())", "DF_HostedDomain_UpdatedAt");
+
+            entity.HasOne(d => d.DnsProvider).WithMany(p => p.HostedDomains)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_HostedDomain_DnsProvider");
+
+            entity.HasOne(d => d.WebGateway).WithMany(p => p.HostedDomains)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_HostedDomain_WebGateway");
         });
 
         modelBuilder.Entity<InvitationCode>(entity =>
@@ -391,6 +536,10 @@ public partial class ChatsDB : DbContext
 
         modelBuilder.Entity<Model>(entity =>
         {
+            entity.HasIndex(e => e.CurrentSnapshotId, "UX_Model_CurrentSnapshotId")
+                .IsUnique()
+                .HasFilter("([CurrentSnapshotId] IS NOT NULL)");
+
             entity.HasOne(d => d.CurrentSnapshot).WithOne(p => p.Model)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_Model_CurrentSnapshot");
@@ -399,6 +548,10 @@ public partial class ChatsDB : DbContext
         modelBuilder.Entity<ModelKey>(entity =>
         {
             entity.HasKey(e => e.Id).HasName("PK_ModelKey2");
+
+            entity.HasIndex(e => e.CurrentSnapshotId, "UX_ModelKey_CurrentSnapshotId")
+                .IsUnique()
+                .HasFilter("([CurrentSnapshotId] IS NOT NULL)");
 
             entity.HasOne(d => d.CurrentSnapshot).WithOne(p => p.ModelKey)
                 .OnDelete(DeleteBehavior.ClientSetNull)
@@ -435,9 +588,56 @@ public partial class ChatsDB : DbContext
                 .HasConstraintName("FK_Prompt_CreateUserId");
         });
 
+        modelBuilder.Entity<ProviderFileMapping>(entity =>
+        {
+            entity.HasIndex(e => new { e.FileId, e.ModelKeyId, e.Protocol, e.Purpose }, "UX_ProviderFileMapping_Active")
+                .IsUnique()
+                .HasFilter("([Status]=(1))");
+
+            entity.Property(e => e.Status).HasDefaultValue((byte)1, "DF_ProviderFileMapping_Status");
+            entity.Property(e => e.UploadedAt).HasDefaultValueSql("(sysutcdatetime())", "DF_ProviderFileMapping_UploadedAt");
+
+            entity.HasOne(d => d.File).WithMany(p => p.ProviderFileMappings).HasConstraintName("FK_ProviderFileMapping_File");
+
+            entity.HasOne(d => d.ModelKey).WithMany(p => p.ProviderFileMappings).HasConstraintName("FK_ProviderFileMapping_ModelKey");
+        });
+
+        modelBuilder.Entity<PublishedSite>(entity =>
+        {
+            entity.HasIndex(e => e.Hostname, "UX_PublishedSite_Hostname_Live")
+                .IsUnique()
+                .HasFilter("([Status]<>(5))");
+
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("(sysutcdatetime())", "DF_PublishedSite_CreatedAt");
+            entity.Property(e => e.UpdatedAt).HasDefaultValueSql("(sysutcdatetime())", "DF_PublishedSite_UpdatedAt");
+
+            entity.HasOne(d => d.ContainerPortMapping).WithMany(p => p.PublishedSites).HasConstraintName("FK_PublishedSite_PortMapping");
+
+            entity.HasOne(d => d.ContainerResource).WithMany(p => p.PublishedSites)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_PublishedSite_Container");
+
+            entity.HasOne(d => d.HostedDomain).WithMany(p => p.PublishedSites)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_PublishedSite_HostedDomain");
+
+            entity.HasOne(d => d.User).WithMany(p => p.PublishedSites)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_PublishedSite_User");
+        });
+
+        modelBuilder.Entity<PublishedSiteEvent>(entity =>
+        {
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("(sysutcdatetime())", "DF_PublishedSiteEvent_CreatedAt");
+
+            entity.HasOne(d => d.PublishedSite).WithMany(p => p.PublishedSiteEvents).HasConstraintName("FK_PublishedSiteEvent_Site");
+        });
+
         modelBuilder.Entity<RequestTrace>(entity =>
         {
             entity.HasKey(e => e.Id).IsClustered(false);
+
+            entity.HasIndex(e => e.ScheduledDeleteAt, "IX_RequestTrace_ScheduledDeleteAt_NotNull").HasFilter("([ScheduledDeleteAt] IS NOT NULL)");
 
             entity.HasIndex(e => e.StartedAt, "IX_RequestTrace_StartedAt").IsClustered();
 
@@ -650,6 +850,17 @@ public partial class ChatsDB : DbContext
 
         modelBuilder.Entity<UserContainerQuotum>(entity =>
         {
+            entity.HasIndex(e => e.UserId, "UX_UserContainerQuota_Default")
+                .IsUnique()
+                .HasFilter("([UserId] IS NULL)");
+
+            entity.HasIndex(e => e.UserId, "UX_UserContainerQuota_User")
+                .IsUnique()
+                .HasFilter("([UserId] IS NOT NULL)");
+
+            entity.Property(e => e.AllowedNetworkModes).HasDefaultValue("none,bridge", "DF_UserContainerQuota_AllowedNetworkModes");
+            entity.Property(e => e.UpdatedAt).HasDefaultValueSql("(sysutcdatetime())", "DF_UserContainerQuota_UpdatedAt");
+
             entity.HasOne(d => d.User).WithOne(p => p.UserContainerQuotum).HasConstraintName("FK_UserContainerQuota_User");
         });
 
@@ -684,6 +895,14 @@ public partial class ChatsDB : DbContext
         {
             entity.HasKey(e => e.Id).HasName("PK_ModelUsage");
 
+            entity.HasIndex(e => e.BalanceTransactionId, "IX_ModelUsage_BalanceTransaction")
+                .IsUnique()
+                .HasFilter("([BalanceTransactionId] IS NOT NULL)");
+
+            entity.HasIndex(e => e.UsageTransactionId, "IX_ModelUsage_UsageTransaction")
+                .IsUnique()
+                .HasFilter("([UsageTransactionId] IS NOT NULL)");
+
             entity.HasOne(d => d.BalanceTransaction).WithOne(p => p.UserModelUsage).HasConstraintName("FK_ModelUsage_TransactionLog");
 
             entity.HasOne(d => d.ClientInfo).WithMany(p => p.UserModelUsages)
@@ -703,6 +922,15 @@ public partial class ChatsDB : DbContext
             entity.HasOne(d => d.User).WithMany(p => p.UserModelUsages)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_UserModelUsage_User");
+        });
+
+        modelBuilder.Entity<WebGateway>(entity =>
+        {
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("(sysutcdatetime())", "DF_WebGateway_CreatedAt");
+            entity.Property(e => e.IsEnabled).HasDefaultValue(true, "DF_WebGateway_IsEnabled");
+            entity.Property(e => e.PublicPort).HasDefaultValue(443, "DF_WebGateway_PublicPort");
+            entity.Property(e => e.PublicScheme).HasDefaultValue("https", "DF_WebGateway_PublicScheme");
+            entity.Property(e => e.UpdatedAt).HasDefaultValueSql("(sysutcdatetime())", "DF_WebGateway_UpdatedAt");
         });
 
         OnModelCreatingPartial(modelBuilder);

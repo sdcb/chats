@@ -62,6 +62,9 @@ public partial class User
     public virtual ICollection<ChatPreset> ChatPresets { get; set; } = new List<ChatPreset>();
 
     [InverseProperty("User")]
+    public virtual ICollection<ChatRun> ChatRuns { get; set; } = new List<ChatRun>();
+
+    [InverseProperty("User")]
     public virtual ICollection<Chat> Chats { get; set; } = new List<Chat>();
 
     [InverseProperty("OwnerUser")]
@@ -84,6 +87,9 @@ public partial class User
 
     [InverseProperty("CreateUser")]
     public virtual ICollection<Prompt> Prompts { get; set; } = new List<Prompt>();
+
+    [InverseProperty("User")]
+    public virtual ICollection<PublishedSite> PublishedSites { get; set; } = new List<PublishedSite>();
 
     [InverseProperty("User")]
     public virtual ICollection<SmsRecord> SmsRecords { get; set; } = new List<SmsRecord>();

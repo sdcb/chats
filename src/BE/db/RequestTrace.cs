@@ -7,7 +7,6 @@ using Microsoft.EntityFrameworkCore;
 namespace Chats.DB;
 
 [Table("RequestTrace")]
-[Index("ScheduledDeleteAt", Name = "IX_RequestTrace_ScheduledDeleteAt_NotNull")]
 [Index("TraceId", Name = "IX_RequestTrace_TraceId")]
 [Index("UserId", Name = "IX_RequestTrace_UserId")]
 public partial class RequestTrace

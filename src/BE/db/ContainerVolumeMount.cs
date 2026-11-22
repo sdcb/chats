@@ -8,7 +8,6 @@ namespace Chats.DB;
 
 [Table("ContainerVolumeMount")]
 [Index("ContainerResourceId", "IsActive", Name = "IX_ContainerVolumeMount_Container_Active")]
-[Index("VolumeId", "ContainerResourceId", "ContainerPath", Name = "UX_ContainerVolumeMount_ActivePath", IsUnique = true)]
 public partial class ContainerVolumeMount
 {
     [Key]

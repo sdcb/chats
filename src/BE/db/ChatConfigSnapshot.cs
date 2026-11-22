@@ -7,9 +7,7 @@ using Microsoft.EntityFrameworkCore;
 namespace Chats.DB;
 
 [Table("ChatConfigSnapshot")]
-[Index("HashCode", Name = "IX_ChatConfigSnapshot_HashCode")]
 [Index("ModelSnapshotId", Name = "IX_ChatConfigSnapshot_ModelSnapshotId")]
-[Index("ModelSnapshotId", "HashCode", Name = "UX_ChatConfigSnapshot_ModelSnapshotId_HashCode", IsUnique = true)]
 public partial class ChatConfigSnapshot
 {
     [Key]

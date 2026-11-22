@@ -50,5 +50,8 @@ public partial class File
     public virtual FileService FileService { get; set; } = null!;
 
     [InverseProperty("File")]
+    public virtual ICollection<ProviderFileMapping> ProviderFileMappings { get; set; } = new List<ProviderFileMapping>();
+
+    [InverseProperty("File")]
     public virtual ICollection<StepContentFile> StepContentFiles { get; set; } = new List<StepContentFile>();
 }

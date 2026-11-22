@@ -40,6 +40,17 @@ public partial class ContainerRuntimeNode
 
     public DateTime UpdatedAt { get; set; }
 
+    [StringLength(255)]
+    [Unicode(false)]
+    public string? PublicHost { get; set; }
+
+    public int? PortRangeStart { get; set; }
+
+    public int? PortRangeEnd { get; set; }
+
+    [InverseProperty("RuntimeNode")]
+    public virtual ICollection<ContainerPortMapping> ContainerPortMappings { get; set; } = new List<ContainerPortMapping>();
+
     [InverseProperty("RuntimeNode")]
     public virtual ICollection<ContainerResourceTemplate> ContainerResourceTemplates { get; set; } = new List<ContainerResourceTemplate>();
 
