@@ -18,18 +18,16 @@ Sdcb Chats 是一个强大且灵活的大语言模型前端，支持 22+ 主流 
 
 <img alt="chats" src="https://github.com/user-attachments/assets/106ece3f-d94d-460e-9313-4a01f624a647" />
 
-## 🆕 最新版本（1.17.0）
+## 🆕 最新版本（1.17.1）
 
-- 📅 发布日期：2026-08-27
-- ⚡ 响应速度统计：Token 速度排除首 Token（TTFT）等待时间，仅统计生成阶段
-- 🖼️ 图像生成背景模式：支持默认、`auto`、`opaque` 和 `transparent`
-- 🧠 模型上下文提示词：图像生成直接使用用户原文，保留必要运行时上下文
-- 🌳 聊天分支稳定性：修复实时 SSE 分支元数据和无效子树请求
-- 👥 用户管理：拆分用户编辑和修改密码表单，改善密码管理器兼容性
-- 🐛 稳定性修复：修复图像接口重复 `/v1`、缺少模型校验并增加回归测试
-- ⬆️ 升级重点：SQL Server 和 SQLite 部署需运行对应的 `1.17.0` 数据库迁移脚本
+- 📅 发布日期：2026-11-22
+- 🔒 安全补丁版本，建议所有用户升级
+- 🛡️ .NET 安全修复：基于 .NET 10.0.15 重新构建，修复 Brotli 解码器漏洞（CVE-2026-111497）
+- 🔑 MCP 权限加固：修复被分配用户可读取其他用户自定义 Headers 的问题（#148），非所有者不再可见 MCP URL 和 Headers
+- 🖼️ 图像处理：新增 WebP 支持，图像头解析迁移到 Sdcb.SimdCodecs 2.0.0
+- ⬆️ 升级提示：使用框架依赖版（`chats.zip`）需将 ASP.NET Core 运行时升级到 10.0.14 或更高；从 1.16 及更早版本升级时，SQL Server 和 SQLite 部署仍需运行 `1.17.0` 数据库迁移脚本
 
-👉 [查看 1.17.0 发布说明](./doc/zh-CN/release-notes/1.17.0.md) · [查看全部版本](./doc/zh-CN/release-notes/README.md)
+👉 [查看 1.17.1 发布说明](./doc/zh-CN/release-notes/1.17.1.md) · [查看全部版本](./doc/zh-CN/release-notes/README.md)
 
 ## 快速开始
 
