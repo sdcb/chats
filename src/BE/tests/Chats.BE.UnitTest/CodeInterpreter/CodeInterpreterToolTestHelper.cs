@@ -26,7 +26,8 @@ internal static class CodeInterpreterToolTestHelper
         FakeDockerService docker,
         CodePodConfig? codePodConfig = null,
         CodeInterpreterOptions? options = null,
-        IFileServiceFactory? fileServiceFactory = null)
+        IFileServiceFactory? fileServiceFactory = null,
+        ChatsDB? db = null)
     {
         if (fileServiceFactory is null)
         {
@@ -42,7 +43,8 @@ internal static class CodeInterpreterToolTestHelper
             serviceProvider.GetRequiredService<IServiceScopeFactory>(),
             Options.Create(codePodConfig ?? new CodePodConfig()),
             Options.Create(options ?? new CodeInterpreterOptions()),
-            NullLogger<CodeInterpreterExecutor>.Instance);
+            NullLogger<CodeInterpreterExecutor>.Instance,
+            db);
     }
 
     public static async Task<ContainerResource> SeedResourceAsync(

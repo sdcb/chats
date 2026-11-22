@@ -138,6 +138,23 @@ public sealed class WebsitePublishingServiceTests
         Assert.Equal((byte)DBPublishedSiteStatus.Active, site.Status);
     }
 
+    [Fact]
+    public async Task Unpublish_KeepsMappingWhileSameContainerServesOtherSites()
+    {
+        using ChatsDB db = CreateDb();
+        Fakes f = new();
+        WebsitePublishingService svc = f.Create(db);
+        PublishedSite a = await svc.PublishAsync(Command("a"), CancellationToken.None);
+        PublishedSite b = await svc.PublishAsync(Command("b") with { ContainerPort = 8081 }, CancellationToken.None);
+
+        f.Log.Clear();
+        await svc.UnpublishAsync(a.Id, OwnerId, isAdmin: false, force: false, CancellationToken.None);
+        Assert.DoesNotContain(f.Log, x => x.StartsWith("map-remove"));
+
+        await svc.UnpublishAsync(b.Id, OwnerId, isAdmin: false, force: false, CancellationToken.None);
+        Assert.Contains("map-remove 8", f.Log);
+    }
+
     private static PublishSiteCommand Command(string subdomain)
         => new(OwnerId, false, ContainerId, 8080, DomainId, subdomain, null);
 
@@ -187,7 +204,7 @@ public sealed class WebsitePublishingServiceTests
         public Task<SitePortMapping> EnsureAsync(long containerResourceId, int containerPort, CancellationToken cancellationToken)
         {
             Log.Add("map-ensure");
-            return Task.FromResult(new SitePortMapping(7, "10.0.0.2:41000", !MappingExisted));
+            return Task.FromResult(new SitePortMapping(containerPort - 8073, "10.0.0.2:41000", !MappingExisted));
         }
 
         public Task RemoveAsync(long mappingId, CancellationToken cancellationToken)

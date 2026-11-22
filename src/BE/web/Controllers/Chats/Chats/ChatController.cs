@@ -1,4 +1,4 @@
-﻿using Chats.BE.Services.AgentRuns;
+using Chats.BE.Services.AgentRuns;
 using Chats.BE.Controllers.Chats.Chats.Dtos;
 using Chats.BE.Controllers.Chats.Messages.Dtos;
 using Chats.BE.Controllers.Chats.Messages;
@@ -539,12 +539,22 @@ public class ChatController(
             span.ChatConfig.Model = userModels[span.ChatConfig.ModelId!.Value].Model;
         }
 
+        // Spans run concurrently with the merge loop below, which saves through `db`; give each span its own
+        // DbContext scope for the code interpreter so their queries never overlap on one context instance.
+        IServiceScopeFactory spanScopeFactory = HttpContext.RequestServices.GetRequiredService<IServiceScopeFactory>();
+        CodeInterpreterExecutor CreateSpanCodeInterpreter()
+        {
+            AsyncServiceScope scope = spanScopeFactory.CreateAsyncScope();
+            HttpContext.Response.RegisterForDisposeAsync(scope);
+            return scope.ServiceProvider.GetRequiredService<CodeInterpreterExecutor>();
+        }
+
         List<Task> streamTasks = [.. toGenerateSpans.Select((span, index) => ProcessChatSpan(
             currentUser,
             logger,
             chatRunService,
             fup,
-            codeInterpreter,
+            span.ChatConfig.CodeExecutionEnabled ? CreateSpanCodeInterpreter() : codeInterpreter,
             span,
             req,
             chat,
@@ -587,7 +597,7 @@ public class ChatController(
 
         bool dbUserMessageYield = false;
         FileService fs = null!;
-        await foreach (SseResponseLine line in MergeChannels([.. channels]).Reader.ReadAllAsync(CancellationToken.None))
+        await foreach (SseResponseLine line in ReadWithKeepAlive(MergeChannels([.. channels]).Reader))
         {
             if (line is TempStartTurn startTurn)
             {
@@ -1490,6 +1500,29 @@ public class ChatController(
     /// Records the event in the current run (for resuming clients) and streams it to the original client if still connected.
     /// The run keeps executing after the client disconnects.
     /// </summary>
+    /// <summary>Reads merged lines, sending an SSE comment to the original client whenever nothing arrives for 15 seconds (long silent tool calls).</summary>
+    private async IAsyncEnumerable<SseResponseLine> ReadWithKeepAlive(ChannelReader<SseResponseLine> reader)
+    {
+        while (true)
+        {
+            Task<bool> wait = reader.WaitToReadAsync().AsTask();
+            while (await Task.WhenAny(wait, Task.Delay(TimeSpan.FromSeconds(15))) != wait)
+            {
+                if (_clientGone) continue;
+                try
+                {
+                    await Response.Body.WriteAsync(": keep-alive\r\n\r\n"u8.ToArray());
+                    await Response.Body.FlushAsync();
+                }
+                catch (Exception)
+                {
+                    _clientGone = true;
+                }
+            }
+            if (!await wait) yield break;
+            while (reader.TryRead(out SseResponseLine? line)) yield return line;
+        }
+    }
     private async Task YieldResponse(SseResponseLine line)
     {
         byte[] json = JsonSerializer.SerializeToUtf8Bytes(line, JSON.JsonSerializerOptions);

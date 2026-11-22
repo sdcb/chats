@@ -117,6 +117,19 @@ public sealed class ContainerPortMappingTests
     }
 
     [Fact]
+    public async Task EnsureMapping_SkipsHostPortsBusyOutsideChats()
+    {
+        await using ChatsDB db = CreateDb();
+        (ContainerResource resource, FakeDockerService docker, ContainerPortMappingService service) = await SetupAsync(db, OwnerId, portRange: (41000, 41010));
+        docker.HostBusyPorts.Add(41000);
+
+        ContainerPortMapping mapping = await service.EnsureMappingAsync(resource.Id, 80, "tcp", CancellationToken.None);
+
+        Assert.Equal(41001, mapping.HostPort);
+        Assert.Equal(41001, Assert.Single(await service.ListAsync(resource.Id, CancellationToken.None)).HostPort);
+    }
+
+    [Fact]
     public async Task RemoveMapping_DeactivatesAndRecreatesWithoutBinding()
     {
         await using ChatsDB db = CreateDb();

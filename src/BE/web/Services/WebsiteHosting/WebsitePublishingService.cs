@@ -221,7 +221,7 @@ public sealed class WebsitePublishingService(
                     await TryStepAsync(rollbackErrors, $"dns-delete {id}", () => dns.DeleteRecordAsync(domain.DnsZone, id, CancellationToken.None));
                 }
             }
-            if (mapping is { Created: true } && !await IsMappingUsedByOtherSiteAsync(mapping.MappingId, site.Id))
+            if (mapping is { Created: true } && !await IsMappingUsedByOtherSiteAsync(mapping.MappingId, site))
             {
                 await TryStepAsync(rollbackErrors, "port-mapping-remove", () => portMapper.RemoveAsync(mapping.MappingId, CancellationToken.None));
             }
@@ -318,7 +318,7 @@ public sealed class WebsitePublishingService(
             }
         }
 
-        if (site.ContainerPortMappingId is long mappingId && !await IsMappingUsedByOtherSiteAsync(mappingId, site.Id))
+        if (site.ContainerPortMappingId is long mappingId && !await IsMappingUsedByOtherSiteAsync(mappingId, site))
         {
             bool ok = await TryStepAsync(errors, "port-mapping-remove", () => portMapper.RemoveAsync(mappingId, cancellationToken));
             if (ok) await AddEventAsync(site, "port-mapping-remove", true, null, operatorUserId);
@@ -338,10 +338,14 @@ public sealed class WebsitePublishingService(
         await AddEventAsync(site, "unpublished", errors.Count == 0, site.LastError, operatorUserId);
     }
 
-    private async Task<bool> IsMappingUsedByOtherSiteAsync(long mappingId, long siteId)
+    /// <summary>
+    /// Removing a port mapping recreates the container, which would kill the services behind other live sites,
+    /// so a mapping is kept while any other live site uses it or the same container.
+    /// </summary>
+    private async Task<bool> IsMappingUsedByOtherSiteAsync(long mappingId, PublishedSite site)
     {
-        return await db.PublishedSites.AnyAsync(x => x.Id != siteId
-            && x.ContainerPortMappingId == mappingId
+        return await db.PublishedSites.AnyAsync(x => x.Id != site.Id
+            && (x.ContainerPortMappingId == mappingId || x.ContainerResourceId == site.ContainerResourceId)
             && LiveStatuses.Contains(x.Status), CancellationToken.None);
     }
 

@@ -669,11 +669,15 @@ public sealed class CodeInterpreterExecutor(
         }
         TurnContext.SessionState state = ensureResult.Value!;
 
+        if (state.DbSession.IsPermanent)
+        {
+            return Result.Fail<string>("AI cannot destroy a permanent Docker resource; stop or delete it from the user interface.");
+        }
         if (_db is not null)
         {
             ContainerResource? resource = await _db.ContainerResources
                 .AsNoTracking()
-                .SingleOrDefaultAsync(x => x.BackendResourceId == state.DbSession.ContainerId && x.DeletedAt == null, cancellationToken);
+                .SingleOrDefaultAsync(x => x.Id == state.DbSession.Id && x.DeletedAt == null, cancellationToken);
             if (resource?.IsPermanent == true)
             {
                 return Result.Fail<string>("AI cannot destroy a permanent Docker resource; stop or delete it from the user interface.");
@@ -1066,6 +1070,30 @@ public sealed class CodeInterpreterExecutor(
             state.ArtifactsSnapshot = await SnapshotArtifacts(state.DbSession.ContainerId, cancellationToken);
             state.SnapshotTaken = true;
             ctx.SessionsBySessionId[sessionId] = state;
+        }
+        else if (state.DbSession.IsPermanent && _db is not null)
+        {
+            // Permanent containers get a new backend id when recreated (port mappings, volume changes),
+            // possibly by another tool earlier in this same turn.
+            var current = await _db.ContainerResources.AsNoTracking()
+                .Where(x => x.Id == state.DbSession.Id)
+                .Select(x => new { x.BackendResourceId, x.Ip, x.DeletedAt, x.StoppedAt })
+                .FirstOrDefaultAsync(cancellationToken);
+            if (current is null || current.DeletedAt != null)
+            {
+                ctx.SessionsBySessionId.Remove(sessionId);
+                return Result.Fail<TurnContext.SessionState>($"Container '{sessionId}' has been deleted.");
+            }
+            if (current.StoppedAt != null)
+            {
+                return Result.Fail<TurnContext.SessionState>($"Container '{sessionId}' is stopped; ask the user to start it.");
+            }
+            if (!string.Equals(current.BackendResourceId, state.DbSession.ContainerId, StringComparison.Ordinal))
+            {
+                state.DbSession.Resource.BackendResourceId = current.BackendResourceId;
+                state.DbSession.Resource.Ip = current.Ip;
+                state.SnapshotTaken = false;
+            }
         }
 
         if (!state.SnapshotTaken)

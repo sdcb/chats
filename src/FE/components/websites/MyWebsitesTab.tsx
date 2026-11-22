@@ -314,6 +314,11 @@ export default function MyWebsitesTab() {
                   setForm({ ...form, containerPort: e.target.value })
                 }
               />
+              <span className="text-xs font-normal text-muted-foreground">
+                {t(
+                  'The service must listen on 0.0.0.0 over plain HTTP. Exposing a new port recreates the container: running processes stop and only data on mounted volumes is kept, so set up and start the service after publishing.',
+                )}
+              </span>
             </Label>
             <div className="grid grid-cols-2 gap-2">
               <Label>

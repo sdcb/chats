@@ -69,21 +69,33 @@ public sealed class ContainerPortMappingService(
             if (count >= max) throw new ContainerResourceException(ContainerResourceErrorCodes.QuotaExceeded, "Port mapping quota exceeded.");
         }
 
-        ContainerPortMapping mapping = await AllocateAsync(resource, node, containerPort, proto, start, end, cancellationToken);
-
-        try
+        // Ports held outside Chats' bookkeeping (orphaned containers, other processes) are skipped and the next free port is tried.
+        HashSet<int> busyOnHost = [];
+        for (int attempt = 1; ; attempt++)
         {
-            await _runtime.RecreateAsync(resource, cancellationToken);
+            ContainerPortMapping mapping = await AllocateAsync(resource, node, containerPort, proto, start, end, busyOnHost, cancellationToken);
+            try
+            {
+                await _runtime.RecreateAsync(resource, cancellationToken);
+                return mapping;
+            }
+            catch (Exception ex)
+            {
+                mapping.IsActive = false;
+                mapping.RemovedAt = DateTime.UtcNow;
+                await _db.SaveChangesAsync(CancellationToken.None);
+                if (attempt >= MaxAllocationAttempts || !IsHostPortConflict(ex)) throw;
+                _logger.LogWarning("Host port {HostPort} on node {Node} is in use outside Chats, trying another port ({Attempt})", mapping.HostPort, node.Name, attempt);
+                busyOnHost.Add(mapping.HostPort);
+            }
         }
-        catch
-        {
-            mapping.IsActive = false;
-            mapping.RemovedAt = DateTime.UtcNow;
-            await _db.SaveChangesAsync(CancellationToken.None);
-            throw;
-        }
-        return mapping;
     }
+
+    /// <summary>True when a backend error says the host port is already taken (Docker / OS wording).</summary>
+    public static bool IsHostPortConflict(Exception ex)
+        => ex.Message.Contains("port is already allocated", StringComparison.OrdinalIgnoreCase)
+        || ex.Message.Contains("address already in use", StringComparison.OrdinalIgnoreCase)
+        || ex.Message.Contains("only one usage of each socket address", StringComparison.OrdinalIgnoreCase);
 
     /// <summary>Marks a mapping inactive and recreates the container so the binding is released. No-op if already inactive.</summary>
     public async Task RemoveMappingAsync(long mappingId, CancellationToken cancellationToken)
@@ -170,7 +182,7 @@ public sealed class ContainerPortMappingService(
         ContainerRuntimeManager.EnsureDockerNode(resource.RuntimeNode);
     }
 
-    private async Task<ContainerPortMapping> AllocateAsync(ContainerResource resource, ContainerRuntimeNode node, int containerPort, string proto, int start, int end, CancellationToken cancellationToken)
+    private async Task<ContainerPortMapping> AllocateAsync(ContainerResource resource, ContainerRuntimeNode node, int containerPort, string proto, int start, int end, IReadOnlySet<int> excluded, CancellationToken cancellationToken)
     {
         for (int attempt = 1; ; attempt++)
         {
@@ -178,7 +190,7 @@ public sealed class ContainerPortMappingService(
                 .Where(x => x.RuntimeNodeId == node.Id && x.Protocol == proto && x.IsActive && x.HostPort >= start && x.HostPort <= end)
                 .Select(x => x.HostPort)
                 .ToListAsync(cancellationToken);
-            int hostPort = AllocateHostPort(start, end, used)
+            int hostPort = AllocateHostPort(start, end, used.Concat(excluded))
                 ?? throw new ContainerResourceException(ContainerResourceErrorCodes.PortPoolExhausted, "No free host port is available on the runtime node.");
 
             ContainerPortMapping mapping = new()

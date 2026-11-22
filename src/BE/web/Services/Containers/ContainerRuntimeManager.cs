@@ -41,7 +41,7 @@ public sealed class ContainerRuntimeManager(
 
     public static string NewBackendVolumeName() => $"chats-vol-{Guid.NewGuid():N}";
 
-    public static bool IsManagedVolumeName(string? name) => name is not null && name.StartsWith("chats-vol-", StringComparison.Ordinal);
+    public static bool IsManagedVolumeName([System.Diagnostics.CodeAnalysis.NotNullWhen(true)] string? name) => name is not null && name.StartsWith("chats-vol-", StringComparison.Ordinal);
 
     public static void EnsureDockerNode(ContainerRuntimeNode node)
     {

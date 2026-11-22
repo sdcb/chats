@@ -33,17 +33,19 @@ public sealed class WebsiteTools(IServiceScopeFactory scopeFactory, ILogger<Webs
         tools.Add(FunctionTool.Create(PublishToolName,
             "Publish a TCP/HTTP port of a permanent Docker container authorized for this chat as a public website " +
             "(DNS record + reverse proxy). The service inside the container must listen on 0.0.0.0:<container_port> and speak plain HTTP. " +
-            "Returns the public URL. Use list_websites to see available domains and existing websites.",
+            "Exposing a port that is not yet published recreates the container: running processes stop and only data on mounted volumes is kept, " +
+            "so call this before writing site files outside volumes and starting the service, or restart the service afterwards. " +
+            "Returns the public URL. Use list_websites to see authorized containers, available domains and existing websites.",
             """
             {"type":"object","properties":{
-              "container":{"type":"string","description":"Container name or containerId as listed for this chat."},
+              "container":{"type":"string","description":"Container name from list_websites.containers. Optional when exactly one container is authorized for this chat."},
               "container_port":{"type":"integer","minimum":1,"maximum":65535,"description":"Port the HTTP service listens on inside the container."},
               "subdomain":{"type":"string","description":"Lowercase DNS label, e.g. 'my-blog' (letters, digits, hyphens)."},
               "domain":{"type":"string","description":"Optional parent domain from list_websites.availableDomains; required when more than one is available."}
-            },"required":["container","container_port","subdomain"],"additionalProperties":false}
+            },"required":["container_port","subdomain"],"additionalProperties":false}
             """));
         tools.Add(FunctionTool.Create(ListToolName,
-            "List websites published from containers authorized for this chat, and the domains available for publishing.",
+            "List the permanent containers authorized for this chat, websites published from them, and the domains available for publishing.",
             """{"type":"object","properties":{},"additionalProperties":false}"""));
         tools.Add(FunctionTool.Create(UnpublishToolName,
             "Unpublish (take offline) a website previously published from a container authorized for this chat. Removes its DNS record and gateway route.",
@@ -120,14 +122,17 @@ public sealed class WebsiteTools(IServiceScopeFactory scopeFactory, ILogger<Webs
         string? subdomain = GetString(args, "subdomain");
         string? domainName = GetString(args, "domain");
         int? port = GetInt(args, "container_port");
-        if (string.IsNullOrWhiteSpace(containerRef)) return (false, "Argument 'container' is required.");
         if (string.IsNullOrWhiteSpace(subdomain)) return (false, "Argument 'subdomain' is required.");
         if (port is null) return (false, "Argument 'container_port' must be an integer.");
 
         List<ContainerResource> containers = await VisibleContainers(db, userId, chatId).AsNoTracking().ToListAsync(cancellationToken);
-        ContainerResource? container = ResolveContainer(containers, containerRef);
+        ContainerResource? container = string.IsNullOrWhiteSpace(containerRef)
+            ? (containers.Count == 1 ? containers[0] : null)
+            : ResolveContainer(containers, containerRef);
         if (container == null)
         {
+            if (string.IsNullOrWhiteSpace(containerRef) && containers.Count > 1)
+                return (false, $"Argument 'container' is required. Available: {string.Join(", ", containers.Select(x => x.Name))}");
             return (false, containers.Count == 0
                 ? "No running permanent container is authorized for this chat."
                 : $"Container '{containerRef}' not found. Available: {string.Join(", ", containers.Select(x => x.Name))}");
@@ -148,6 +153,8 @@ public sealed class WebsiteTools(IServiceScopeFactory scopeFactory, ILogger<Webs
             if (domain == null) return (false, $"Domain '{domainName}' is not available. Available: {string.Join(", ", domains.Select(x => x.Domain))}");
         }
 
+        bool hadMapping = await db.ContainerPortMappings.AnyAsync(x => x.ContainerResourceId == container.Id
+            && x.ContainerPort == port.Value && x.Protocol == ContainerPortMappingService.ProtocolTcp && x.IsActive, cancellationToken);
         PublishedSite site = await publisher.PublishAsync(new PublishSiteCommand(userId, isAdmin, container.Id, port.Value, domain.Id, subdomain, chatId), cancellationToken);
         WebGateway gateway = await db.WebGateways.AsNoTracking().SingleAsync(x => x.Id == domain.WebGatewayId, cancellationToken);
         return (true, JsonSerializer.Serialize(new
@@ -158,7 +165,10 @@ public sealed class WebsiteTools(IServiceScopeFactory scopeFactory, ILogger<Webs
             container = container.Name,
             containerPort = site.ContainerPort,
             status = "active",
-            note = "DNS propagation may take a few minutes. The service must listen on 0.0.0.0 inside the container.",
+            containerRestarted = !hadMapping,
+            note = (!hadMapping
+                ? "The container was recreated to expose the new port: running processes stopped and files outside mounted volumes were reset, so recreate any such files and start the HTTP service again now (in the background). "
+                : "") + "DNS propagation may take a few minutes. The service must listen on 0.0.0.0 inside the container.",
         }, ResultJsonOptions));
     }
 
@@ -172,8 +182,10 @@ public sealed class WebsiteTools(IServiceScopeFactory scopeFactory, ILogger<Webs
             .Select(x => new { x.Id, x.Hostname, x.ContainerPort, x.Status, x.LastError, Container = x.ContainerResource.Name, x.HostedDomain.WebGateway.PublicScheme, x.HostedDomain.WebGateway.PublicPort })
             .ToListAsync(cancellationToken);
         List<string> domains = await publisher.QueryAvailableDomains(isAdmin).OrderBy(x => x.Domain).Select(x => x.Domain).ToListAsync(cancellationToken);
+        var containers = await visible.AsNoTracking().OrderBy(x => x.Name).Select(x => new { name = x.Name, image = x.Image }).ToListAsync(cancellationToken);
         return (true, JsonSerializer.Serialize(new
         {
+            containers,
             availableDomains = domains,
             websites = sites.Select(x => new
             {

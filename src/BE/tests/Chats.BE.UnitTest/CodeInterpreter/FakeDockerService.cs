@@ -131,9 +131,13 @@ public sealed class FakeDockerService : IDockerService
     public List<string> StoppedContainers { get; } = [];
     public List<string> StartedContainers { get; } = [];
 
+    public HashSet<int> HostBusyPorts { get; } = [];
+
     public Task<ContainerInfo> CreateContainerCoreAsync(string image, ResourceLimits? resourceLimits, string? networkName, ContainerCreateOptions? options, CancellationToken cancellationToken = default)
     {
         CreateOptions.Add(options);
+        if (options?.PortBindings.FirstOrDefault(x => HostBusyPorts.Contains(x.HostPort)) is { } busy)
+            throw new InvalidOperationException($"Bind for 0.0.0.0:{busy.HostPort} failed: port is already allocated");
         return CreateContainerCoreAsync(image, resourceLimits, networkName, cancellationToken);
     }
 

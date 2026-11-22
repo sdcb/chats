@@ -1188,6 +1188,7 @@
   "Port mappings": "端口映射",
   "Adding or removing a port mapping recreates the container. Files outside mounted volumes will be lost.": "添加或移除端口映射会重建容器，挂载卷之外的文件将会丢失。",
   "Container port": "容器端口",
+  "The service must listen on 0.0.0.0 over plain HTTP. Exposing a new port recreates the container: running processes stop and only data on mounted volumes is kept, so set up and start the service after publishing.": "服务需以纯 HTTP 监听 0.0.0.0。首次暴露某个端口会重建容器：运行中的进程会停止，只有挂载卷中的数据会保留，请在发布后再部署并启动服务。",
   "No port mappings": "暂无端口映射",
   "Read only": "只读",
   "Mounting or unmounting a volume recreates the container. Files outside mounted volumes will be lost.": "挂载或卸载卷会重建容器，挂载卷之外的文件将会丢失。",
