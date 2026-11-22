@@ -4,10 +4,13 @@
   "private": true,
   "scripts": {
     "export": "next export",
+    "copy-monaco": "node scripts/copy-monaco.mjs",
+    "predev": "node scripts/copy-monaco.mjs",
     "dev": "next dev",
+    "prebuild": "node scripts/copy-monaco.mjs",
     "build": "next build --webpack",
     "start": "next start",
-    "www": "cross-env API_URL= next build --webpack && node scripts/deploy-to-wwwroot.mjs",
+    "www": "node scripts/copy-monaco.mjs && cross-env API_URL= next build --webpack && node scripts/deploy-to-wwwroot.mjs",
     "lint": "eslint . --ext .js,.jsx,.ts,.tsx",
     "format": "prettier --write ."
   },

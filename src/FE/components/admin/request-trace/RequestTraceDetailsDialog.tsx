@@ -28,10 +28,21 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { getRequestTraceDetails } from '@/apis/adminApis';
 import { cn } from '@/lib/utils';
 
-const MonacoEditor = dynamic(() => import('@monaco-editor/react'), {
-  ssr: false,
-  loading: () => <Skeleton className="h-full w-full" />,
-});
+// Self-hosted copy (see scripts/copy-monaco.mjs); the library defaults to cdn.jsdelivr.net,
+// which is slow/unreliable in some networks and leaves the editor stuck on "Loading...".
+const MONACO_VS_PATH = '/vendor/monaco/vs';
+
+const MonacoEditor = dynamic(
+  () =>
+    import('@monaco-editor/react').then((mod) => {
+      mod.loader.config({ paths: { vs: MONACO_VS_PATH } });
+      return mod.default;
+    }),
+  {
+    ssr: false,
+    loading: () => <Skeleton className="h-full w-full" />,
+  },
+);
 
 const MONACO_EDITOR_OPTIONS = {
   automaticLayout: true,

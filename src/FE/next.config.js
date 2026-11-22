@@ -7,6 +7,8 @@ const withPWA = require('next-pwa')({
   register: !isDev,
   skipWaiting: !isDev,
   disable: isDev,
+  // Monaco (~15MB, copied by scripts/copy-monaco.mjs) is loaded on demand, never precached.
+  publicExcludes: ['!noprecache/**/*', '!vendor/monaco/**/*'],
 });
 
 /** @type {import('next').NextConfig} */
