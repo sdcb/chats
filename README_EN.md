@@ -23,6 +23,7 @@ Sdcb Chats is a powerful and flexible frontend for large language models, suppor
 - 📅 Release Date: 2026-11-22
 - 🔒 Security patch release, all users are encouraged to upgrade
 - 🛡️ .NET security fix: rebuilt on .NET 10.0.15 to fix the Brotli decoder vulnerability (CVE-2026-111497)
+- 📦 Dependency security updates: upgrades EF Core and related packages to 10.0.15 and System.Security.Cryptography.Pkcs to 10.0.13, fixing CVE-2026-84008 and CVE-2026-70162
 - 🔑 MCP permission hardening: fixes assigned users being able to read other users' custom headers (#148); MCP URL and headers are hidden from non-owners
 - 🖼️ Image processing: adds WebP support and migrates image header parsing to Sdcb.SimdCodecs 2.0.0
 - ⬆️ Upgrade notes: users of the framework-dependent package (`chats.zip`) must upgrade the ASP.NET Core runtime to 10.0.14 or later; when upgrading from 1.16 or earlier, SQL Server and SQLite deployments must still run the `1.17.0` database migration
