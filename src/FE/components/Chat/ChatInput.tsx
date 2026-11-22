@@ -173,10 +173,13 @@ const ChatInput = ({
       prevStatus !== ChatStatus.Chatting &&
       currentStatus === ChatStatus.Chatting
     ) {
+      // 单 span 的运行支持插话（#152），保持输入框可见
+      const steerable =
+        selectedChat.spans.filter((x) => x.enabled).length === 1;
       // 会话上下文开始：预期结束时自动展开，除非期间被用户手动修改
-      setIsCollapsedByChat(true);
+      setIsCollapsedByChat(!steerable);
       // 自动收起输入框
-      if (showChatInput) {
+      if (!steerable && showChatInput) {
         settingDispatch(setShowChatInput(false));
       }
     }
