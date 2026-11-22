@@ -31,6 +31,8 @@ import {
   IconPlus,
   IconStopFilled,
   IconFolder,
+  IconBulb,
+  IconX,
 } from '@/components/Icons/index';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -40,6 +42,10 @@ import Tips from '@/components/Tips/Tips';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 
 import { setShowChatInput } from '@/actions/setting.actions';
+import { setSteeringRefill, setSteerings } from '@/actions/chat.actions';
+import { cancelChatRunSteer, steerChatRun, ChatApiError } from '@/apis/chatApi';
+import { useChatMode } from '@/hooks/useChatMode';
+import ChatContainerAccessSelector from './ChatContainerAccessSelector';
 import HomeContext from '@/contexts/home.context';
 import UploadButton from '../Button/UploadButton';
 import PasteUpload from '../PasteUpload/PasteUpload';
@@ -81,11 +87,13 @@ const ChatInput = ({
   const { t } = useTranslation();
 
   const {
-    state: { prompts, modelMap, showChatInput },
+    state: { prompts, modelMap, showChatInput, activeRun, steerings, steeringRefill },
     selectedChat,
     handleStopChats,
     settingDispatch,
+    chatDispatch,
   } = useContext(HomeContext);
+  const [chatMode, setChatMode] = useChatMode(selectedChat?.id);
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const promptListRef = useRef<HTMLUListElement | null>(null);
@@ -256,6 +264,13 @@ const ChatInput = ({
     };
   }, [onHeightChange]);
 
+  // discarded steering messages go back into the input box
+  useEffect(() => {
+    if (!steeringRefill) return;
+    setContentText((prev) => (prev ? `${prev}\n\n${steeringRefill}` : steeringRefill));
+    chatDispatch(setSteeringRefill(null));
+  }, [steeringRefill, chatDispatch]);
+
   // 如果没有选中的聊天，不渲染ChatInput
   if (!selectedChat) {
     return null;
@@ -282,8 +297,46 @@ const ChatInput = ({
     updatePromptListVisibility(value);
   };
 
+  const isChatting = selectedChat.status === ChatStatus.Chatting;
+  const steerableRun =
+    isChatting && activeRun && activeRun.chatId === selectedChat.id && activeRun.steerable
+      ? activeRun
+      : null;
+
+  const handleSteer = async () => {
+    if (!steerableRun) return;
+    const text = contentText.trim();
+    if (!text) {
+      toast.error(t('Please enter a message'));
+      return;
+    }
+    if (contentFiles.length > 0) {
+      toast.error(t('Files cannot be attached to a steering message'));
+      return;
+    }
+    try {
+      const steering = await steerChatRun(steerableRun.runId, text);
+      chatDispatch(setSteerings((prev) => [...prev.filter((x) => x.id !== steering.id), steering]));
+      setContentText('');
+    } catch (e) {
+      const msg = (e as ChatApiError)?.message;
+      toast.error(msg ? t(msg) : t('Failed to send steering message'));
+    }
+  };
+
+  const handleCancelSteer = async (steeringId: number) => {
+    if (!steerableRun) return;
+    try {
+      await cancelChatRunSteer(steerableRun.runId, steeringId);
+      chatDispatch(setSteerings((prev) => prev.filter((x) => x.id !== steeringId)));
+    } catch {
+      toast.error(t('The message has already been delivered'));
+    }
+  };
+
   const handleSend = () => {
     if (selectedChat.status === ChatStatus.Chatting) {
+      if (steerableRun) void handleSteer();
       return;
     }
 
@@ -605,6 +658,26 @@ const ChatInput = ({
                   ))}
                 </div>
               )}
+              {steerableRun && steerings.length > 0 && (
+                <div className="flex flex-col gap-1 px-3 py-2 border-b border-border/40">
+                  {steerings.map((x) => (
+                    <div key={x.id} className="flex items-start gap-2 text-sm">
+                      <span className="shrink-0 rounded bg-muted px-1.5 text-xs leading-5 text-muted-foreground">
+                        {t('Queued')}
+                      </span>
+                      <span className="min-w-0 flex-1 whitespace-pre-wrap break-words line-clamp-3">{x.content}</span>
+                      <button
+                        type="button"
+                        className="shrink-0 rounded p-0.5 hover:bg-muted"
+                        onClick={() => handleCancelSteer(x.id)}
+                        title={t('Cancel') || undefined}
+                      >
+                        <IconX size={14} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
               {/* Textarea容器 */}
               <div className="relative w-full">
                 <Textarea
@@ -619,7 +692,9 @@ const ChatInput = ({
                     transitionDuration: `${ANIMATION_DURATION_MS}ms`
                   }}
                   placeholder={
-                    t('Type a message or type "/" to select a prompt...') || ''
+                    (steerableRun
+                      ? t('Add more instructions; they will be delivered at the next step...')
+                      : t('Type a message or type "/" to select a prompt...')) || ''
                   }
                   value={contentText}
                   rows={TEXTAREA_MIN_ROWS}
@@ -788,10 +863,54 @@ const ChatInput = ({
                     modelMap={modelMap}
                     disabled={selectedChat.status === ChatStatus.Chatting}
                   />
+                  <ChatContainerAccessSelector
+                    chatId={selectedChat.id}
+                    disabled={selectedChat.status === ChatStatus.Chatting}
+                  />
+                  <Tips
+                    trigger={
+                      <Button
+                        size="xs"
+                        className={cn(
+                          'h-8 shrink-0 gap-1 rounded-full px-2',
+                          chatMode === 'plan'
+                            ? 'bg-primary text-primary-foreground hover:bg-primary/90'
+                            : 'bg-muted/60 text-foreground hover:bg-muted',
+                        )}
+                        disabled={selectedChat.status === ChatStatus.Chatting}
+                        onClick={() => setChatMode(chatMode === 'plan' ? 'normal' : 'plan')}
+                      >
+                        <IconBulb size={16} />
+                        <span className="hidden text-xs sm:inline">{t('Plan')}</span>
+                      </Button>
+                    }
+                    side="top"
+                    content={
+                      chatMode === 'plan'
+                        ? t('Plan mode: the AI asks questions and plans before acting. Click to switch back to normal mode')
+                        : t('Switch to plan mode')
+                    }
+                  />
                 </div>
 
                 {/* 右侧: 发送/停止按钮 */}
                 <div className="flex items-center gap-2">
+                  {steerableRun && (
+                    <Tips
+                      trigger={
+                        <Button
+                          variant="outline"
+                          className="rounded-sm h-9 px-3"
+                          disabled={!contentText.trim()}
+                          onClick={() => void handleSteer()}
+                        >
+                          <span className="text-sm">{t('Steer')}</span>
+                        </Button>
+                      }
+                      side="top"
+                      content={t('Send to the running AI; it will read it at the next step')}
+                    />
+                  )}
                   {selectedChat.status === ChatStatus.Chatting ? (
                     <Tips
                       trigger={

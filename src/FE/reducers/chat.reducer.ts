@@ -1,5 +1,13 @@
 import { CHATS_SELECT_TYPE, IChat, IChatPaging } from '@/types/chat';
+import { SteeringDto } from '@/types/chatMessage';
 import { IChatGroup } from '@/types/group';
+
+export interface ActiveRunState {
+  chatId: string;
+  runId: string;
+  /** steering is only supported for single-span runs */
+  steerable: boolean;
+}
 
 interface ChatInitialState {
   chats: IChat[];
@@ -8,6 +16,10 @@ interface ChatInitialState {
   isChatsLoading: boolean;
   isMessagesLoading: boolean;
   stopIds: string[];
+  activeRun: ActiveRunState | null;
+  steerings: SteeringDto[];
+  /** discarded steering text to put back into the input box */
+  steeringRefill: string | null;
   chatGroups: IChatGroup[];
   chatsSelectType: CHATS_SELECT_TYPE;
 }
@@ -19,6 +31,9 @@ export const chatInitialState: ChatInitialState = {
   isChatsLoading: false,
   isMessagesLoading: false,
   stopIds: [],
+  activeRun: null,
+  steerings: [],
+  steeringRefill: null,
   chatGroups: [],
   chatsSelectType: CHATS_SELECT_TYPE.NONE,
 };
@@ -32,6 +47,9 @@ export enum ChatActionTypes {
   SET_IS_CHATS_LOADING = 'SET_IS_CHATS_LOADING',
   SET_IS_MESSAGES_LOADING = 'SET_IS_MESSAGES_LOADING',
   SET_STOP_IDS = 'SET_STOP_IDS',
+  SET_ACTIVE_RUN = 'SET_ACTIVE_RUN',
+  SET_STEERINGS = 'SET_STEERINGS',
+  SET_STEERING_REFILL = 'SET_STEERING_REFILL',
   SET_CHAT_GROUP = 'SET_CHAT_GROUP',
   SET_IS_CHATS_DELETE_MODE = 'SET_IS_CHATS_DELETE_MODE',
 }
@@ -50,6 +68,12 @@ export type ChatAction =
       payload: boolean;
     }
   | { type: ChatActionTypes.SET_STOP_IDS; payload: string[] }
+  | { type: ChatActionTypes.SET_ACTIVE_RUN; payload: ActiveRunState | null }
+  | {
+      type: ChatActionTypes.SET_STEERINGS;
+      payload: SteeringDto[] | ((prev: SteeringDto[]) => SteeringDto[]);
+    }
+  | { type: ChatActionTypes.SET_STEERING_REFILL; payload: string | null }
   | { type: ChatActionTypes.SET_CHAT_GROUP; payload: IChatGroup[] }
   | {
       type: ChatActionTypes.SET_IS_CHATS_DELETE_MODE;
@@ -73,6 +97,18 @@ export default function chatReducer(
       return { ...state, isMessagesLoading: action.payload };
     case ChatActionTypes.SET_STOP_IDS:
       return { ...state, stopIds: action.payload };
+    case ChatActionTypes.SET_ACTIVE_RUN:
+      return { ...state, activeRun: action.payload };
+    case ChatActionTypes.SET_STEERINGS:
+      return {
+        ...state,
+        steerings:
+          typeof action.payload === 'function'
+            ? action.payload(state.steerings)
+            : action.payload,
+      };
+    case ChatActionTypes.SET_STEERING_REFILL:
+      return { ...state, steeringRefill: action.payload };
     case ChatActionTypes.SET_CHAT_GROUP:
       return { ...state, chatGroups: action.payload };
     case ChatActionTypes.SET_IS_CHATS_DELETE_MODE:

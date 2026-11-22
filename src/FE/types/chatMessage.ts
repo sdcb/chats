@@ -27,6 +27,81 @@ export enum SseResponseKind {
   CallingTool = 13,
   ToolProgress = 14,
   ToolCompleted = 15,
+  RunStarted = 16,
+  AskQuestion = 17,
+  SteeringInjected = 18,
+  SteeringDiscarded = 19,
+}
+
+export type ChatRunMode = 'normal' | 'plan';
+
+export interface AskQuestionItem {
+  id: string;
+  question: string;
+  type: 'single' | 'multi' | 'text';
+  options: string[];
+  default?: string | null;
+}
+
+export interface AskQuestionAnswer {
+  id: string;
+  values: string[];
+}
+
+export enum ChatRunSteeringStatus {
+  Queued = 1,
+  Injected = 2,
+  Discarded = 3,
+}
+
+export interface SteeringDto {
+  id: number;
+  content: string;
+  status: ChatRunSteeringStatus;
+  createdAt: string;
+}
+
+export enum ChatRunKind {
+  General = 1,
+  RegenerateOne = 2,
+  RegenerateAll = 3,
+  Continue = 4,
+}
+
+export interface ActiveChatRunDto {
+  runId: string;
+  kind: ChatRunKind;
+  mode: ChatRunMode;
+  createdAt: string;
+  spans: { spanId: number; modelId: number; modelName: string }[];
+  userTurn?: IChatMessage | null;
+  assistantTurn?: IChatMessage | null;
+  parentAssistantTurnId?: string | null;
+  parentUserTurnId?: string | null;
+  steerings: SteeringDto[];
+}
+
+interface SseResponseLineRunStarted {
+  k: SseResponseKind.RunStarted;
+  r: string; // encrypted run id
+}
+
+interface SseResponseLineAskQuestion {
+  k: SseResponseKind.AskQuestion;
+  i: number;
+  u: string; // ToolCallId
+  r: AskQuestionItem[];
+}
+
+interface SseResponseLineSteeringInjected {
+  k: SseResponseKind.SteeringInjected;
+  i: number;
+  r: number[]; // steering ids
+}
+
+interface SseResponseLineSteeringDiscarded {
+  k: SseResponseKind.SteeringDiscarded;
+  r: SteeringDto[];
 }
 
 // Discriminated unions for SseResponseLine
@@ -151,7 +226,14 @@ export type SseResponseLine =
   | SseResponseLineToolProgress
   | SseResponseLineToolCompleted
   | SseResponseLineEndStep
-  | SseResponseLineEndTurn;
+  | SseResponseLineEndTurn
+  | SseResponseLineRunStarted
+  | SseResponseLineAskQuestion
+  | SseResponseLineSteeringInjected
+  | SseResponseLineSteeringDiscarded;
+
+/// SSE line plus its event sequence number (the SSE `id:` field), when the server sent one
+export type SseEvent = SseResponseLine & { seq?: number };
 
 /// Step represents a single step within a turn
 export interface IStep {
@@ -159,6 +241,8 @@ export interface IStep {
   contents: ResponseContent[];
   edited: boolean;
   createdAt: string;
+  /// User-role step inside an assistant turn (a mid-run steering message)
+  isUser?: boolean;
 }
 
 export interface IChatMessage {

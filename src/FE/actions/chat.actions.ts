@@ -3,7 +3,10 @@ import { CHATS_SELECT_TYPE, IChat, IChatPaging } from '@/types/chat';
 import { ChatSpanDto } from '@/types/clientApis';
 import { IChatGroup } from '@/types/group';
 
+import { SteeringDto } from '@/types/chatMessage';
+
 import {
+  ActiveRunState,
   ChatAction,
   ChatActionTypes,
 } from '@/reducers/chat.reducer';
@@ -84,3 +87,20 @@ export const setChatsSelectType = (type: CHATS_SELECT_TYPE): ChatAction => ({
   payload: type,
 });
 
+
+export const setActiveRun = (activeRun: ActiveRunState | null): ChatAction => ({
+  type: ChatActionTypes.SET_ACTIVE_RUN,
+  payload: activeRun,
+});
+
+export const setSteerings = (
+  steerings: SteeringDto[] | ((prev: SteeringDto[]) => SteeringDto[]),
+): ChatAction => ({
+  type: ChatActionTypes.SET_STEERINGS,
+  payload: steerings,
+});
+
+export const setSteeringRefill = (text: string | null): ChatAction => ({
+  type: ChatActionTypes.SET_STEERING_REFILL,
+  payload: text,
+});

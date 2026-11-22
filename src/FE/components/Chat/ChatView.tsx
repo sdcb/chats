@@ -42,18 +42,25 @@ import {
   ToolResponseContent,
 } from '@/types/chat';
 import {
+  ActiveChatRunDto,
+  AskQuestionAnswer,
+  ChatRunKind,
+  ChatRunSteeringStatus,
   IChatMessage,
   IStep,
   MessageDisplayType,
   ReactionMessageType,
   ResponseMessageTempId,
+  SseEvent,
   SseResponseKind,
-  SseResponseLine,
 } from '@/types/chatMessage';
 import { ChatSpanDto } from '@/types/clientApis';
 
 import {
+  setActiveRun,
   setChats,
+  setSteeringRefill,
+  setSteerings,
   setStopIds,
 } from '@/actions/chat.actions';
 import {
@@ -81,7 +88,16 @@ import {
   putResponseMessageEditInPlace,
   responseContentToRequest,
 } from '@/apis/clientApis';
-import { streamGeneralChat, streamRegenerateAssistant, streamRegenerateAllAssistant, ChatApiError } from '@/apis/chatApi';
+import {
+  streamGeneralChat,
+  streamRegenerateAssistant,
+  streamRegenerateAllAssistant,
+  streamAnswerQuestion,
+  streamRunEvents,
+  getActiveChatRun,
+  ChatApiError,
+} from '@/apis/chatApi';
+import { getChatMode } from '@/hooks/useChatMode';
 
 const ChatView = memo(() => {
   const { t } = useTranslation();
@@ -516,6 +532,12 @@ const ChatView = memo(() => {
     const messageList = selectedMsgs[lastMessageGroupIndex];
     const updatedMessageList = messageList.map((x) => {
       if (x.id === messageId) {
+        // Replayed EndStep (run resume) for a step we already have: drop the duplicated streamed content
+        if (stepData.id && x.steps.some((s) => s.id === stepData.id)) {
+          const newSteps = [...x.steps];
+          newSteps[newSteps.length - 1] = { id: '', contents: [], edited: false, createdAt: new Date().toISOString() };
+          return { ...x, steps: newSteps };
+        }
         // Replace the last step with the actual step data from server, and add a new empty step
         if (x.steps.length > 0) {
           const newSteps = [...x.steps];
@@ -1008,6 +1030,7 @@ const ChatView = memo(() => {
       modelId,
       parentUserMessageId: messageId || null,
       timezoneOffset: getTz(),
+      mode: getChatMode(chatId),
     };
 
     try {
@@ -1054,6 +1077,7 @@ const ChatView = memo(() => {
       modelId,
       parentUserMessageId: messageId,
       timezoneOffset: getTz(),
+      mode: getChatMode(chatId),
     };
 
     try {
@@ -1097,6 +1121,7 @@ const ChatView = memo(() => {
       parentAssistantMessageId: messageId || null,
       userMessage: requestContent,
       timezoneOffset: getTz(),
+      mode: getChatMode(chatId),
     };
 
     try {
@@ -1112,11 +1137,20 @@ const ChatView = memo(() => {
 
   const handleChatMessage = useCallback(
     async (
-      stream: AsyncIterable<SseResponseLine>,
+      stream: AsyncIterable<SseEvent>,
       selectedMessageList: IChatMessage[][],
+      baseMessages?: IChatMessage[],
     ) => {
       if (!selectedChat) return;
-      let messageList = [...messages];
+      const chatId = selectedChat.id;
+      let messageList = [...(baseMessages ?? messages)];
+      let leafMessageId: string | undefined = undefined;
+      const upsertMessage = (msg: IChatMessage) => {
+        const existingIndex = messageList.findIndex((m) => m.id === msg.id);
+        if (existingIndex >= 0) messageList[existingIndex] = msg;
+        else messageList.push(msg);
+        leafMessageId = msg.id;
+      };
       // 用于跟踪每个 span 最近一次非空的工具调用 ID，便于将 u 为 null 的参数片段归并
       const currentToolCallIdBySpan = new Map<number, string>();
       const finishReasoningForAllSpans = () => {
@@ -1144,6 +1178,20 @@ const ChatView = memo(() => {
 
         if (value.k === SseResponseKind.StopId) {
           chatDispatch(setStopIds([value.r]));
+        } else if (value.k === SseResponseKind.RunStarted) {
+          const lastGroup = selectedMessageList[selectedMessageList.length - 1] ?? [];
+          const streamingCount = lastGroup.filter((m) => m.id.startsWith(ResponseMessageTempId)).length;
+          chatDispatch(setActiveRun({ chatId, runId: value.r, steerable: streamingCount === 1 }));
+        } else if (value.k === SseResponseKind.AskQuestion) {
+          // The run suspends after this; the pending question is rendered from the tool call itself.
+        } else if (value.k === SseResponseKind.SteeringInjected) {
+          const injected = new Set(value.r);
+          chatDispatch(setSteerings((prev) => prev.filter((x) => !injected.has(x.id))));
+        } else if (value.k === SseResponseKind.SteeringDiscarded) {
+          const discarded = new Set(value.r.map((x) => x.id));
+          chatDispatch(setSteerings((prev) => prev.filter((x) => !discarded.has(x.id))));
+          const text = value.r.map((x) => x.content).join('\n\n');
+          if (text) chatDispatch(setSteeringRefill(text));
         } else if (value.k === SseResponseKind.ReasoningSegment) {
           const { r: msg, i: spanId } = value;
           const msgId = `${ResponseMessageTempId}-${spanId}`;
@@ -1167,7 +1215,7 @@ const ChatView = memo(() => {
             ChatSpanStatus.Failed,
           );
         } else if (value.k === SseResponseKind.UserMessage) {
-          messageList.push(value.r);
+          upsertMessage(value.r);
         } else if (value.k === SseResponseKind.ResponseMessage) {
           const { r: msg, i: spanId } = value;
           const msgId = `${ResponseMessageTempId}-${spanId}`;
@@ -1178,7 +1226,7 @@ const ChatView = memo(() => {
             ChatSpanStatus.None,
           );
           selectedMessageList = changeSelectedResponseMessageInfo(selectedMessageList, spanId, msg);
-          messageList.push(msg);
+          upsertMessage(msg);
         } else if (value.k === SseResponseKind.StartResponse) {
           // StartResponse only carries response timing metadata.
         } else if (value.k === SseResponseKind.FileGenerating) {
@@ -1247,19 +1295,25 @@ const ChatView = memo(() => {
         }
       } finally {
         finishReasoningForAllSpans();
+        chatDispatch(setActiveRun(null));
+        chatDispatch(setSteerings([]));
       }
 
-      const leafMessageId = messageList[messageList.length - 1].id;
+      if (messageList.length === 0) {
+        changeSelectedChatStatus(ChatStatus.None);
+        return;
+      }
+      const finalLeafId: string = leafMessageId ?? messageList[messageList.length - 1].id;
       const selectedMsgs = findSelectedMessageByLeafId(
         messageList,
-        leafMessageId,
+        finalLeafId,
       );
 
       const updatedAt = currentISODateString();
       updateChatsState((prevChats) =>
         prevChats.map((x) =>
           x.id === selectedChat.id
-            ? { ...x, leafMessageId, updatedAt }
+            ? { ...x, leafMessageId: finalLeafId, updatedAt }
             : x,
         ),
       );
@@ -1279,6 +1333,142 @@ const ChatView = memo(() => {
       updateChatsState,
     ],
   );
+
+  const handleAnswerQuestion = useCallback(
+    async (
+      messageId: string,
+      toolCallId: string,
+      answers: AskQuestionAnswer[],
+      skipped: boolean,
+    ) => {
+      if (!selectedChat) return;
+      const groupIndex = selectedMessages.findIndex((g) => g.some((m) => m.id === messageId));
+      if (groupIndex === -1) return;
+      const original = selectedMessages[groupIndex].find((m) => m.id === messageId)!;
+      if (original.spanId === null || original.spanId === undefined) return;
+
+      startChat();
+      // continue the same assistant turn: stream into it under the temp id, keeping its steps
+      const streaming: IChatMessage = {
+        ...original,
+        id: `${ResponseMessageTempId}-${original.spanId}`,
+        status: ChatSpanStatus.Chatting,
+        steps: [
+          ...original.steps,
+          { id: '', contents: [], edited: false, createdAt: new Date().toISOString() },
+        ],
+      };
+      const selectedMessageList = selectedMessages.slice(0, groupIndex + 1);
+      selectedMessageList[groupIndex] = [streaming];
+      messageDispatch(setSelectedMessages(selectedMessageList));
+
+      try {
+        const stream = streamAnswerQuestion({
+          chatId: selectedChat.id,
+          turnId: messageId,
+          toolCallId,
+          answers,
+          skipped,
+          timezoneOffset: getTz(),
+          mode: getChatMode(selectedChat.id),
+        });
+        await handleChatMessage(stream, selectedMessageList);
+      } catch (e: any) {
+        handleChatError();
+        const err = e as ChatApiError;
+        const msg = err?.message || (typeof e === 'string' ? e : '');
+        toast.error(t(msg) || msg);
+      }
+    },
+    [handleChatError, handleChatMessage, messageDispatch, selectedChat, selectedMessages, startChat, t],
+  );
+
+  // Resume a run that is still executing on the server (e.g. after a page refresh)
+  const resumeCheckedChatIdRef = useRef<string | null>(null);
+  const chatStatusRef = useRef<ChatStatus | undefined>(selectedChat?.status);
+  chatStatusRef.current = selectedChat?.status;
+  const resumeRun = useCallback(
+    async (run: ActiveChatRunDto) => {
+      if (!selectedChat) return;
+      const runCreatedAt = Date.parse(run.createdAt);
+      const isRunTurn = (m: IChatMessage) =>
+        m.role === ChatRole.Assistant &&
+        !Number.isNaN(runCreatedAt) &&
+        Date.parse(m.steps[0]?.createdAt ?? '') >= runCreatedAt;
+
+      let baseMessages = [...messages];
+      let parentId: string | null | undefined;
+      let placeholders: IChatMessage[];
+      if (run.kind === ChatRunKind.Continue && run.assistantTurn) {
+        const turn = run.assistantTurn;
+        parentId = turn.parentId;
+        const keptSteps = turn.steps.filter(
+          (step) => Number.isNaN(runCreatedAt) || Date.parse(step.createdAt) < runCreatedAt,
+        );
+        placeholders = [
+          {
+            ...turn,
+            id: `${ResponseMessageTempId}-${turn.spanId}`,
+            status: ChatSpanStatus.Chatting,
+            steps: [
+              ...keptSteps,
+              { id: '', contents: [], edited: false, createdAt: new Date().toISOString() },
+            ],
+          },
+        ];
+      } else {
+        parentId = run.kind === ChatRunKind.General ? run.userTurn?.id : run.parentUserTurnId;
+        if (!parentId) return;
+        if (run.userTurn && !baseMessages.some((m) => m.id === run.userTurn!.id)) {
+          baseMessages.push(run.userTurn);
+        }
+        // partially persisted assistant turns of this run are rebuilt from the event stream
+        baseMessages = baseMessages.filter((m) => !(m.parentId === parentId && isRunTurn(m)));
+        placeholders = run.spans.map((span) =>
+          generateResponseMessage(span.spanId, parentId!, span.modelId, span.modelName, ChatSpanStatus.Chatting),
+        );
+      }
+
+      const selectedMessageList = parentId ? findSelectedMessageByLeafId(baseMessages, parentId) : [];
+      selectedMessageList.push(placeholders);
+      messageDispatch(setMessages(baseMessages));
+      messageDispatch(setSelectedMessages(selectedMessageList));
+      chatDispatch(setSteerings(run.steerings.filter((x) => x.status === ChatRunSteeringStatus.Queued)));
+      startChat();
+
+      try {
+        await handleChatMessage(streamRunEvents(run.runId), selectedMessageList, baseMessages);
+      } catch (e: any) {
+        handleChatError();
+        const err = e as ChatApiError;
+        const msg = err?.message || (typeof e === 'string' ? e : '');
+        if (msg) toast.error(t(msg) || msg);
+      }
+    },
+    [chatDispatch, handleChatError, handleChatMessage, messageDispatch, messages, selectedChat, startChat, t],
+  );
+
+  useEffect(() => {
+    if (isMessagesLoading) {
+      resumeCheckedChatIdRef.current = null;
+      return;
+    }
+    if (!selectedChat || selectedChat.status === ChatStatus.Chatting) return;
+    if (resumeCheckedChatIdRef.current === selectedChat.id) return;
+    resumeCheckedChatIdRef.current = selectedChat.id;
+    const chatId = selectedChat.id;
+    getActiveChatRun(chatId)
+      .then((run) => {
+        if (
+          run &&
+          resumeCheckedChatIdRef.current === chatId &&
+          chatStatusRef.current !== ChatStatus.Chatting
+        ) {
+          void resumeRun(run);
+        }
+      })
+      .catch(() => undefined);
+  }, [isMessagesLoading, resumeRun, selectedChat]);
 
   const handleChangePrompt = () => {
     // to do
@@ -1640,6 +1830,7 @@ const ChatView = memo(() => {
         timezoneOffset: getTz(),
         parentAssistantMessageId: messageId || null,
         userMessage: requestContent,
+        mode: getChatMode(chatId),
       };
 
       try {
@@ -1720,6 +1911,7 @@ const ChatView = memo(() => {
                   onDeleteMessage={handleDeleteMessage}
                   onChangeDisplayType={handleChangeDisplayType}
                   onRegenerateAllAssistant={handleRegenerateAllAssistant}
+                  onAnswerQuestion={handleAnswerQuestion}
                 />
 
                 <div style={{ height: chatInputInsetPx ? `${chatInputInsetPx}px` : undefined }} />

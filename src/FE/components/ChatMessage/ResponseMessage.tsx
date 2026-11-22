@@ -17,7 +17,7 @@ import {
   ToolCallContent,
   ToolResponseContent,
 } from '@/types/chat';
-import { IChatMessage, IStep, getMessageContents } from '@/types/chatMessage';
+import { AskQuestionAnswer, IChatMessage, IStep, getMessageContents } from '@/types/chatMessage';
 
 import { loadComponentOnce } from '@/components/common/loadComponentOnce';
 import MarkdownRenderer from '@/components/Markdown/MarkdownRenderer';
@@ -25,6 +25,7 @@ import { MarkdownLoadingFallback } from '@/components/Markdown/markdownShared';
 import ImagePreview from '@/components/ImagePreview/ImagePreview';
 import FilePreview from '@/components/FilePreview/FilePreview';
 import StepInfoBubble from './StepInfoBubble';
+import AskQuestionCard, { ASK_QUESTION_TOOL_NAME } from './AskQuestionCard';
 
 import ChatError from '../ChatError/ChatError';
 import { IconCopy, IconEdit } from '../Icons';
@@ -99,10 +100,17 @@ interface Props {
     content: ResponseContent,
     isCopy?: boolean,
   ) => void;
+  /** Set only when this message may answer its pending ask_question call. */
+  onAnswerQuestion?: (
+    messageId: string,
+    toolCallId: string,
+    answers: AskQuestionAnswer[],
+    skipped: boolean,
+  ) => void;
 }
 
 const ResponseMessage = (props: Props) => {
-  const { message, chatStatus, readonly, chatId, chatShareId, groupImageUrls, onEditResponseMessage } = props;
+  const { message, chatStatus, readonly, chatId, chatShareId, groupImageUrls, onEditResponseMessage, onAnswerQuestion } = props;
   const { t } = useTranslation();
 
   // 启用数学公式复制功能（复制时保留原始 LaTeX）
@@ -213,6 +221,21 @@ const ResponseMessage = (props: Props) => {
   const renderToolGroup = (toolGroup: ToolGroupContent, index: number, stepInfo?: { step: IStep; isLastInStep: boolean }) => {
     const { toolCall, toolResponse } = toolGroup;
     const showStepInfo = showPerStepActions && stepInfo?.isLastInStep && !stepInfo.step.edited && stepInfo.step.id;
+
+    if (toolCall.n === ASK_QUESTION_TOOL_NAME) {
+      return (
+        <AskQuestionCard
+          key={`ask-question-${toolCall.u || index}`}
+          toolCall={toolCall}
+          toolResponse={toolResponse}
+          onAnswer={
+            onAnswerQuestion && !toolResponse && !readonly
+              ? (toolCallId, answers, skipped) => onAnswerQuestion(messageId, toolCallId, answers, skipped)
+              : undefined
+          }
+        />
+      );
+    }
 
     return (
       <div key={`tool-group-${index}`} className={cn("relative group/item", index > 0 ? "my-1" : "")}>
@@ -441,6 +464,16 @@ const ResponseMessage = (props: Props) => {
               chatShareId={chatShareId}
               chatStatus={chatStatus}
             />
+          );
+        } else if (c.$type === MessageContentType.text && contentStepMap.get(c.i)?.step.isUser) {
+          // mid-run steering message from the user
+          return (
+            <div key={'steering-' + index} className="my-2 flex justify-end">
+              <div className="max-w-[85%] rounded-md bg-muted px-3 py-2 text-sm">
+                <div className="mb-0.5 text-xs text-muted-foreground">{t('Steering message')}</div>
+                <div className="whitespace-pre-wrap">{c.c}</div>
+              </div>
+            </div>
           );
         } else if (c.$type === MessageContentType.text) {
           return editId === c.i ? (

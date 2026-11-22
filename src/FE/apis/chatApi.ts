@@ -1,7 +1,14 @@
 import { getApiUrl } from '@/utils/common';
 import { getUserSession } from '@/utils/user';
 import { RequestContent } from '@/types/chat';
-import { SseResponseLine } from '@/types/chatMessage';
+import {
+  ActiveChatRunDto,
+  AskQuestionAnswer,
+  ChatRunMode,
+  SseEvent,
+  SseResponseKind,
+  SteeringDto,
+} from '@/types/chatMessage';
 
 export type ChatApiError = Error & {
   status?: number;
@@ -13,13 +20,22 @@ type FetchOptions = {
 };
 
 async function streamPost(path: string, body: unknown, options?: FetchOptions): Promise<Response> {
+  return apiFetch(path, 'POST', body, options);
+}
+
+async function apiFetch(
+  path: string,
+  method: 'GET' | 'POST' | 'DELETE',
+  body?: unknown,
+  options?: FetchOptions,
+): Promise<Response> {
   const res = await fetch(`${getApiUrl()}${path}`, {
-    method: 'POST',
+    method,
     headers: {
-      'Content-Type': 'application/json',
+      ...(body !== undefined ? { 'Content-Type': 'application/json' } : {}),
       Authorization: `Bearer ${getUserSession()}`,
     },
-    body: JSON.stringify(body ?? {}),
+    body: body !== undefined ? JSON.stringify(body ?? {}) : undefined,
     signal: options?.signal,
   });
 
@@ -57,6 +73,7 @@ export type PostGeneralChatBody = {
   timezoneOffset: number;
   parentAssistantMessageId: string | null;
   userMessage: RequestContent[];
+  mode?: ChatRunMode;
 };
 
 function postGeneralChat(body: PostGeneralChatBody, options?: FetchOptions): Promise<Response> {
@@ -69,6 +86,7 @@ export type PostRegenerateAssistantBody = {
   modelId: number;
   parentUserMessageId: string | null;
   timezoneOffset: number;
+  mode?: ChatRunMode;
 };
 
 function postRegenerateAssistant(
@@ -83,6 +101,7 @@ export type PostRegenerateAllAssistantBody = {
   modelId: number;
   parentUserMessageId: string;
   timezoneOffset: number;
+  mode?: ChatRunMode;
 };
 
 function postRegenerateAllAssistant(
@@ -92,7 +111,7 @@ function postRegenerateAllAssistant(
   return streamPost('/api/chats/regenerate-all-assistant-message', body, options);
 }
 
-async function* parseSseResponse(res: Response): AsyncGenerator<SseResponseLine> {
+async function* parseSseResponse(res: Response): AsyncGenerator<SseEvent> {
   const data = res.body;
   if (!data) return;
   const reader = data.getReader();
@@ -118,17 +137,21 @@ async function* parseSseResponse(res: Response): AsyncGenerator<SseResponseLine>
         // 收集所有 data: 行
         const lines = messageBlock.split(/\r?\n/);
         let dataLines: string[] = [];
+        let seq: number | undefined = undefined;
         
         for (const line of lines) {
           if (line.startsWith('data:')) {
             // data: 后可能有空格，保留原始内容
             const content = line.slice(5).trimStart();
             dataLines.push(content);
+          } else if (line.startsWith('id:')) {
+            const parsed = Number.parseInt(line.slice(3).trim(), 10);
+            if (Number.isFinite(parsed)) seq = parsed;
           } else if (line.startsWith(':')) {
-            // 忽略注释行
+            // 忽略注释行（keep-alive）
             continue;
           }
-          // 其他字段（event:, id:, retry:）目前忽略，因为后端只用 data
+          // 其他字段（event:, retry:）目前忽略
         }
         
         if (dataLines.length === 0) continue;
@@ -137,7 +160,8 @@ async function* parseSseResponse(res: Response): AsyncGenerator<SseResponseLine>
         const jsonString = dataLines.join('\n');
         
         try {
-          const obj = JSON.parse(jsonString) as SseResponseLine;
+          const obj = JSON.parse(jsonString) as SseEvent;
+          if (seq !== undefined) obj.seq = seq;
           yield obj;
         } catch (e) {
           console.error('Failed to parse SSE data:', jsonString, e);
@@ -157,23 +181,125 @@ async function* parseSseResponse(res: Response): AsyncGenerator<SseResponseLine>
 export async function* streamGeneralChat(
   body: PostGeneralChatBody,
   options?: FetchOptions,
-): AsyncGenerator<SseResponseLine> {
+): AsyncGenerator<SseEvent> {
   const res = await postGeneralChat(body, options);
-  yield* parseSseResponse(res);
+  yield* withRunResume(parseSseResponse(res), options);
 }
 
 export async function* streamRegenerateAssistant(
   body: PostRegenerateAssistantBody,
   options?: FetchOptions,
-): AsyncGenerator<SseResponseLine> {
+): AsyncGenerator<SseEvent> {
   const res = await postRegenerateAssistant(body, options);
-  yield* parseSseResponse(res);
+  yield* withRunResume(parseSseResponse(res), options);
 }
 
 export async function* streamRegenerateAllAssistant(
   body: PostRegenerateAllAssistantBody,
   options?: FetchOptions,
-): AsyncGenerator<SseResponseLine> {
+): AsyncGenerator<SseEvent> {
   const res = await postRegenerateAllAssistant(body, options);
+  yield* withRunResume(parseSseResponse(res), options);
+}
+
+export type PostAnswerQuestionBody = {
+  chatId: string;
+  turnId: string;
+  toolCallId: string;
+  answers: AskQuestionAnswer[];
+  skipped: boolean;
+  timezoneOffset: number;
+  mode?: ChatRunMode;
+};
+
+export async function* streamAnswerQuestion(
+  body: PostAnswerQuestionBody,
+  options?: FetchOptions,
+): AsyncGenerator<SseEvent> {
+  const res = await streamPost('/api/chats/answer-question', body, options);
+  yield* withRunResume(parseSseResponse(res), options);
+}
+
+const MAX_RESUME_ATTEMPTS = 20;
+
+/**
+ * Wraps a run's SSE stream: if the connection drops before the run finishes, reconnect to
+ * GET /api/chat-runs/{runId}/events?after={lastSeq} and continue where it left off.
+ */
+async function* withRunResume(
+  source: AsyncGenerator<SseEvent>,
+  options?: FetchOptions,
+): AsyncGenerator<SseEvent> {
+  let runId: string | null = null;
+  let lastSeq = 0;
+  let current: AsyncGenerator<SseEvent> = source;
+  for (let attempt = 0; ; attempt++) {
+    try {
+      for await (const line of current) {
+        if (line.seq !== undefined) {
+          if (line.seq <= lastSeq) continue; // already delivered
+          lastSeq = line.seq;
+        }
+        if (line.k === SseResponseKind.RunStarted) runId = line.r;
+        yield line;
+      }
+      return; // server closed the stream normally: the run has finished
+    } catch (e) {
+      if (!runId || options?.signal?.aborted || attempt >= MAX_RESUME_ATTEMPTS) throw e;
+      if ((e as ChatApiError)?.status === 404) throw e;
+      console.warn('Run stream interrupted, resuming from', lastSeq, e);
+      await new Promise((resolve) => setTimeout(resolve, Math.min(1000 * (attempt + 1), 5000)));
+      current = streamRunEventsRaw(runId, lastSeq, options);
+    }
+  }
+}
+
+async function* streamRunEventsRaw(
+  runId: string,
+  after: number,
+  options?: FetchOptions,
+): AsyncGenerator<SseEvent> {
+  const res = await apiFetch(
+    `/api/chat-runs/${encodeURIComponent(runId)}/events?after=${after}`,
+    'GET',
+    undefined,
+    options,
+  );
   yield* parseSseResponse(res);
+}
+
+/** Replays a running run from the beginning (after a page refresh) and follows it until it ends. */
+export async function* streamRunEvents(
+  runId: string,
+  after = 0,
+  options?: FetchOptions,
+): AsyncGenerator<SseEvent> {
+  async function* withStart(): AsyncGenerator<SseEvent> {
+    yield { k: SseResponseKind.RunStarted, r: runId };
+    yield* streamRunEventsRaw(runId, after, options);
+  }
+  yield* withRunResume(withStart(), options);
+}
+
+async function jsonOrNull<T>(res: Response): Promise<T | null> {
+  const text = await res.text();
+  return text ? (JSON.parse(text) as T) : null;
+}
+
+export async function getActiveChatRun(chatId: string): Promise<ActiveChatRunDto | null> {
+  const res = await apiFetch(`/api/chat-runs/active?chatId=${encodeURIComponent(chatId)}`, 'GET');
+  return jsonOrNull<ActiveChatRunDto>(res);
+}
+
+export async function stopChatRun(runId: string): Promise<void> {
+  await apiFetch(`/api/chat-runs/${encodeURIComponent(runId)}/stop`, 'POST', {});
+}
+
+export async function steerChatRun(runId: string, content: string): Promise<SteeringDto> {
+  const res = await apiFetch(`/api/chat-runs/${encodeURIComponent(runId)}/steer`, 'POST', { content });
+  return (await res.json()) as SteeringDto;
+}
+
+export async function cancelChatRunSteer(runId: string, steeringId: number): Promise<void> {
+  await apiFetch(`/api/chat-runs/${encodeURIComponent(runId)}/steer/${steeringId}`, 'DELETE');
 }

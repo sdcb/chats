@@ -68,6 +68,7 @@ import {
   postChats,
   stopChat,
 } from '@/apis/clientApis';
+import { stopChatRun } from '@/apis/chatApi';
 import {
   getDesktopChatbarMaxWidth,
   getEffectiveChatbarWidth,
@@ -346,8 +347,13 @@ const HomeContent = () => {
 
   const handleStopChats = () => {
     let p = [] as any[];
+    const activeRun = chatState.activeRun;
+    if (activeRun && activeRun.chatId === selectedChatId) {
+      // durable run: stop via DB flag so it works across instances and after refresh
+      p.push(stopChatRun(activeRun.runId).catch(() => undefined));
+    }
     stopIds.forEach((id) => {
-      p.push(stopChat(id));
+      p.push(stopChat(id).catch(() => undefined));
     });
     Promise.all(p).then(() => {
       chatDispatch(setStopIds([]));

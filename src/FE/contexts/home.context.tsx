@@ -8,6 +8,7 @@ import { IChatGroup } from '@/types/group';
 import { getSettings } from '@/utils/settings';
 
 import {
+  ActiveRunState,
   ChatAction,
 } from '@/reducers/chat.reducer';
 import {
@@ -21,7 +22,7 @@ import {
 } from '@/reducers/prompt.reducer';
 import { SettingsAction } from '@/reducers/setting.reducer';
 import { AdminModelDto } from '@/types/adminApis';
-import { IChatMessage } from '@/types/chatMessage';
+import { IChatMessage, SteeringDto } from '@/types/chatMessage';
 import { Prompt, PromptSlim } from '@/types/prompt';
 
 export interface HandleUpdateChatParams {
@@ -41,6 +42,9 @@ export interface HomeInitialState {
   isChatsLoading: boolean;
   isMessagesLoading: boolean;
   chatsSelectType: CHATS_SELECT_TYPE;
+  activeRun: ActiveRunState | null;
+  steerings: SteeringDto[];
+  steeringRefill: string | null;
 
   models: AdminModelDto[];
   modelMap: Record<string, AdminModelDto>;
@@ -66,6 +70,9 @@ export const initialState: HomeInitialState = {
   isChatsLoading: false,
   isMessagesLoading: false,
   chatsSelectType: CHATS_SELECT_TYPE.NONE,
+  activeRun: null,
+  steerings: [],
+  steeringRefill: null,
 
   models: [],
   modelMap: {},

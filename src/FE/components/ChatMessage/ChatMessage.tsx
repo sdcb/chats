@@ -5,6 +5,7 @@ import { hasMultipleSpans } from '@/utils/chats';
 import { AdminModelDto } from '@/types/adminApis';
 import {
   ChatRole,
+  ChatStatus,
   FileDef,
   IChat,
   Message,
@@ -12,7 +13,13 @@ import {
   ResponseContent,
   getFileUrl,
 } from '@/types/chat';
-import { IChatMessage, MessageDisplayType, ReactionMessageType, getMessageContents } from '@/types/chatMessage';
+import {
+  AskQuestionAnswer,
+  IChatMessage,
+  MessageDisplayType,
+  ReactionMessageType,
+  getMessageContents,
+} from '@/types/chatMessage';
 
 import ChatMessageHeader from './ChatMessageHeader';
 import ResponseMessage from './ResponseMessage';
@@ -45,6 +52,12 @@ export interface Props {
   onDeleteMessage?: (messageId: string) => Promise<void>;
   onChangeDisplayType?: (messageId: string, type: MessageDisplayType) => void;
   onRegenerateAllAssistant?: (messageId: string, modelId: number) => void;
+  onAnswerQuestion?: (
+    messageId: string,
+    toolCallId: string,
+    answers: AskQuestionAnswer[],
+    skipped: boolean,
+  ) => void;
 }
 
 const collectMessageImageUrls = (message: IChatMessage): string[] => {
@@ -101,6 +114,7 @@ export const ChatMessage: FC<Props> = memo(
     onDeleteMessage,
     onChangeDisplayType,
     onRegenerateAllAssistant,
+    onAnswerQuestion,
   }) => {
     const isMultiSpan = hasMultipleSpans(selectedMessages);
     return (
@@ -215,6 +229,13 @@ export const ChatMessage: FC<Props> = memo(
                                   chatShareId={chatShareId}
                                   groupImageUrls={responseGroupImageUrls}
                                   onEditResponseMessage={onEditResponseMessage}
+                                  onAnswerQuestion={
+                                    groupIndex === selectedMessages.length - 1 &&
+                                    messages.length === 1 &&
+                                    selectedChat.status !== ChatStatus.Chatting
+                                      ? onAnswerQuestion
+                                      : undefined
+                                  }
                                 />
                               </div>
                             </div>
